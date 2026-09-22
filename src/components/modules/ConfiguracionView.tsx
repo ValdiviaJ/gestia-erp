@@ -49,6 +49,14 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({ activeSubm
   const [newRoleName, setNewRoleName] = useState('');
   const [newRoleDesc, setNewRoleDesc] = useState('');
 
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [newUser, setNewUser] = useState({
+    fullName: '',
+    email: '',
+    password: 'Gestia2026*',
+    roleId: ''
+  });
+
   // Carga de configuración
   const loadConfigData = async () => {
     try {
@@ -130,6 +138,30 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({ activeSubm
     }
   };
 
+  // Crear nuevo usuario
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newUser.email || !newUser.fullName) {
+      alert('Complete los campos obligatorios');
+      return;
+    }
+    try {
+      await configService.registerNewUser(newUser);
+      setIsUserModalOpen(false);
+      setNewUser({
+        fullName: '',
+        email: '',
+        password: 'Gestia2026*',
+        roleId: ''
+      });
+      setSuccessMsg('Usuario creado exitosamente con credenciales habilitadas.');
+      setTimeout(() => setSuccessMsg(null), 4000);
+      loadConfigData();
+    } catch (err: any) {
+      alert(`Error creando usuario: ${err.message}`);
+    }
+  };
+
   const filteredLogs = auditLogs.filter(log => 
     log.action.toLowerCase().includes(auditSearch.toLowerCase()) ||
     log.entity.toLowerCase().includes(auditSearch.toLowerCase()) ||
@@ -164,12 +196,20 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({ activeSubm
               <h2 className="text-lg font-bold text-slate-900">Gestión de Usuarios del Sistema</h2>
               <p className="text-xs text-slate-500">Cuentas vinculadas a Supabase Auth, roles asignados y estados de acceso</p>
             </div>
-            <button 
-              onClick={loadConfigData}
-              className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-200 transition-colors"
-            >
-              <RefreshCw className="w-4 h-4" /> Sincronizar
-            </button>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={loadConfigData}
+                className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-200 transition-colors"
+              >
+                <RefreshCw className="w-4 h-4" /> Sincronizar
+              </button>
+              <button 
+                onClick={() => setIsUserModalOpen(true)}
+                className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 shadow-sm transition-colors"
+              >
+                <Plus className="w-4 h-4" /> Nuevo Usuario
+              </button>
+            </div>
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
@@ -570,6 +610,89 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({ activeSubm
                   className="px-5 py-2 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 shadow-sm"
                 >
                   Guardar Rol
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* ========================================================= */}
+      {/* MODAL: CREAR USUARIO */}
+      {/* ========================================================= */}
+      {isUserModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md border border-slate-200 shadow-2xl space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
+                <Users className="w-5 h-5 text-blue-600" /> Crear Usuario del Sistema
+              </h3>
+              <button onClick={() => setIsUserModalOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+
+            <form onSubmit={handleCreateUser} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Nombre Completo *</label>
+                <input 
+                  type="text" 
+                  required
+                  value={newUser.fullName}
+                  onChange={e => setNewUser({ ...newUser, fullName: e.target.value })}
+                  placeholder="Ej. Ana Torres Quispe"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Correo Corporativo *</label>
+                <input 
+                  type="email" 
+                  required
+                  value={newUser.email}
+                  onChange={e => setNewUser({ ...newUser, email: e.target.value })}
+                  placeholder="usuario@gestia.pe"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Contraseña Inicial</label>
+                  <input 
+                    type="text" 
+                    value={newUser.password}
+                    onChange={e => setNewUser({ ...newUser, password: e.target.value })}
+                    placeholder="Gestia2026*"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Rol de Seguridad</label>
+                  <select 
+                    value={newUser.roleId}
+                    onChange={e => setNewUser({ ...newUser, roleId: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold"
+                  >
+                    <option value="">Seleccionar rol...</option>
+                    {roles.map(r => (
+                      <option key={r.id} value={r.id}>{r.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-100">
+                <button 
+                  type="button" 
+                  onClick={() => setIsUserModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-semibold hover:bg-slate-200"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit" 
+                  className="px-5 py-2 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 shadow-sm"
+                >
+                  Guardar Usuario
                 </button>
               </div>
             </form>

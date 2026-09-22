@@ -163,6 +163,34 @@ export const configService = {
 
   // 3. PERFILES DE USUARIO
   async getProfiles(): Promise<ProfileDb[]> {
+    // 3.1 Sincronizar usuario activo actual en la tabla profiles si aún no figura
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const u = session.user;
+        const defaultName = u.user_metadata?.full_name || u.email?.split('@')[0] || 'Administrador';
+        
+        // Obtener el primer rol de Super Admin
+        const { data: adminRole } = await supabase
+          .from('roles')
+          .select('id')
+          .ilike('name', '%admin%')
+          .limit(1)
+          .maybeSingle();
+
+        await supabase.from('profiles').upsert({
+          id: u.id,
+          email: u.email || '',
+          full_name: defaultName,
+          role_id: adminRole?.id || null,
+          status: 'Activo',
+          last_login: new Date().toISOString()
+        }, { onConflict: 'id' });
+      }
+    } catch (syncErr) {
+      console.warn('Sincronización de perfil activa ignorada:', syncErr);
+    }
+
     const { data, error } = await supabase
       .from('profiles')
       .select(`
@@ -173,7 +201,7 @@ export const configService = {
           description
         )
       `)
-      .order('full_name', { ascending: true });
+      .order('created_at', { ascending: false });
 
     if (error) throw error;
     return data || [];
@@ -195,6 +223,32 @@ export const configService = {
       .eq('id', profileId);
 
     if (error) throw error;
+  },
+
+  async registerNewUser(payload: { email: string; password?: string; fullName: string; roleId?: string }): Promise<void> {
+    const password = payload.password || 'Gestia2026*';
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: payload.email.trim(),
+      password,
+      options: {
+        data: {
+          full_name: payload.fullName.trim()
+        }
+      }
+    });
+
+    if (authError) throw authError;
+
+    if (authData.user) {
+      await supabase.from('profiles').upsert({
+        id: authData.user.id,
+        email: payload.email.trim(),
+        full_name: payload.fullName.trim(),
+        role_id: payload.roleId || null,
+        status: 'Activo',
+        last_login: new Date().toISOString()
+      }, { onConflict: 'id' });
+    }
   },
 
   // 4. AUDITORÍA (AUDIT LOGS)
