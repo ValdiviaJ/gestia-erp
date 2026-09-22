@@ -62,15 +62,16 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({ activeSubm
     try {
       setLoading(true);
       setErrorMsg(null);
-      const [sets, rols, profs, logs] = await Promise.all([
+      // 1. Sincronizar perfiles primero para asegurar que el usuario activo esté en la BD
+      const profs = await configService.getProfiles();
+      const [sets, rols, logs] = await Promise.all([
         configService.getCompanySettings(),
         configService.getRoles(),
-        configService.getProfiles(),
         configService.getAuditLogs()
       ]);
+      setProfiles(profs);
       setSettings(sets);
       setRoles(rols);
-      setProfiles(profs);
       setAuditLogs(logs);
     } catch (err: any) {
       console.error('Error cargando configuración:', err);
@@ -299,23 +300,27 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({ activeSubm
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {roles.map(r => (
-              <div key={r.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between hover:border-slate-300">
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="font-bold text-sm text-slate-900">{r.name}</h3>
-                    <span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-bold">
-                      {r.user_count || 0} usuarios
-                    </span>
+            {roles.map(r => {
+              // Conteo reactivo exacto basado en los perfiles reales en memoria
+              const assignedCount = profiles.filter(p => p.role_id === r.id).length;
+              return (
+                <div key={r.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between hover:border-slate-300">
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <h3 className="font-bold text-sm text-slate-900">{r.name}</h3>
+                      <span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-bold">
+                        {assignedCount} {assignedCount === 1 ? 'usuario' : 'usuarios'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500">{r.description || 'Perfil con privilegios asignados en el sistema'}</p>
                   </div>
-                  <p className="text-xs text-slate-500">{r.description || 'Perfil con privilegios asignados en el sistema'}</p>
+                  <div className="pt-3 mt-4 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                    <span className="text-slate-400">{r.is_system ? '🛡️ Rol del Sistema' : 'Personalizado'}</span>
+                    <span className="text-blue-600 font-semibold">Activo</span>
+                  </div>
                 </div>
-                <div className="pt-3 mt-4 border-t border-slate-100 flex items-center justify-between text-[11px]">
-                  <span className="text-slate-400">{r.is_system ? '🛡️ Rol del Sistema' : 'Personalizado'}</span>
-                  <span className="text-blue-600 font-semibold">Activo</span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
