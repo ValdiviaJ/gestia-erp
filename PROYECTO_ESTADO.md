@@ -84,6 +84,22 @@
 
 ---
 
+### H. Módulo de RRHH / Personal (Conexión Total a Supabase)
+* **Servicio ([`src/services/rrhhService.ts`](file:///D:/IX%20ciclo%20sistemas/proyects/Gestia/src/services/rrhhService.ts)):**
+  * Gestión de Departamentos (`departments`): Consulta y creación dinámica de áreas.
+  * Nómina de Colaboradores (`employees`): Consulta con relaciones departamentales, registro con código correlativo automático `EMP-XX`, salarios, puestos y cambio de estado en un clic (`Activo`, `Inactivo`, `De Licencia`).
+  * Control de Asistencia (`employee_attendance`): Marcación de ingreso/salida, estados (`Puntual`, `Tardanza`, `Falta`, `Justificada`), notas de justificación, filtro por fecha y cálculo de puntualidad diaria en tiempo real.
+  * Vacaciones y Permisos (`employee_leaves`): Solicitud por colaborador, tipo de permiso, rangos de fechas, días hábiles, aprobación y rechazo inmediato, e historial de licencias.
+  * Capacitaciones y Talleres (`employee_trainings` / `training_attendees`): Programación de capacitaciones, horas de formación, asignación de asistentes y marcado de culminación.
+* **Vista Completa ([`src/components/modules/RrhhView.tsx`](file:///D:/IX%20ciclo%20sistemas/proyects/Gestia/src/components/modules/RrhhView.tsx)):**
+  * Submódulos 100% integrados a la base de datos (Colaboradores, Asistencia, Vacaciones, Capacitaciones).
+  * Filtros en tiempo real por término de búsqueda y departamento.
+  * Modales de registro para Colaboradores, Asistencias, Permisos, Talleres y Departamentos.
+* **Métricas en Vivo:**
+  * Indicador de solicitudes pendientes de permisos/vacaciones reflejado en tiempo real en los badges superiores de navegación.
+
+---
+
 ## 🗄️ 2. Mapeo de Tablas de Base de Datos Utilizadas
 | Entidad | Tabla en Supabase | Operaciones Implementadas |
 | :--- | :--- | :--- |
@@ -99,11 +115,15 @@
 | **Compras** | `public.purchases` | Emisión de órdenes OC, fechas de entrega y costos |
 | **Detalle Compra**| `public.purchase_items` | Cantidades y costos unitarios pactados |
 | **Recepciones** | `public.goods_receipts` | Guías de remisión, almacén destino y auditoría de ingreso |
+| **Departamentos** | `public.departments` | Consulta y creación de áreas operativas |
+| **Colaboradores** | `public.employees` | Lectura completa, registro con código correlativo, salarios y estados |
+| **Asistencia** | `public.employee_attendance` | Marcaciones de ingreso/salida, control de tardanzas y cálculo % |
+| **Permisos/Vac.** | `public.employee_leaves` | Solicitudes, conteo de días, aprobaciones y rechazos en vivo |
+| **Capacitaciones**| `public.employee_trainings` | Talleres, horas y asignación de participantes |
 
 ---
 
 ## 📌 3. Tareas Pendientes para la Próxima Sesión
-1. **Módulo RRHH / Personal:** Conectar colaboradores (`employees`), departamentos y control de asistencia con Supabase.
-2. **Módulo Finanzas:** Conectar cuentas de banco (`financial_accounts`) y flujo de transacciones/caja (`financial_transactions`).
-3. **Módulo Dashboard / BI:** Consolidar gráficos de ventas e inventario consumiendo las métricas reales acumuladas en la base de datos.
-4. **Módulo Configuración:** Administrar datos de la empresa (`company_settings`) y roles de usuario.
+1. **Módulo Finanzas:** Conectar cuentas de banco (`financial_accounts`), ingresos/egresos (`financial_transactions`) y cuentas de crédito/cobranza (`credit_accounts`).
+2. **Módulo Dashboard / BI:** Consolidar gráficos de ventas e inventario consumiendo las métricas reales acumuladas en la base de datos.
+3. **Módulo Configuración:** Administrar datos de la empresa (`company_settings`) y roles de usuario.

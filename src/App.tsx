@@ -111,6 +111,7 @@ export function App() {
       // RRHH
       case 'empleados': return String(systemCounts.employeesCount);
       case 'departamentos': return String(systemCounts.departmentsCount);
+      case 'vacaciones': return systemCounts.leavesPendingCount > 0 ? String(systemCounts.leavesPendingCount) : undefined;
 
       // Finanzas
       case 'cuentas': return String(systemCounts.accountsCount);

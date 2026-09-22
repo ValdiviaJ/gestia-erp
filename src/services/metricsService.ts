@@ -19,6 +19,7 @@ export interface SystemCounts {
   // RRHH
   employeesCount: number;
   departmentsCount: number;
+  leavesPendingCount: number;
 
   // Finanzas
   accountsCount: number;
@@ -40,6 +41,7 @@ export const metricsService = {
         { count: purchasesCount },
         { count: employeesCount },
         { count: departmentsCount },
+        { count: leavesPendingCount },
         { count: accountsCount },
         { count: transactionsCount }
       ] = await Promise.all([
@@ -54,6 +56,7 @@ export const metricsService = {
         supabase.from('purchases').select('*', { count: 'exact', head: true }),
         supabase.from('employees').select('*', { count: 'exact', head: true }),
         supabase.from('departments').select('*', { count: 'exact', head: true }),
+        supabase.from('employee_leaves').select('*', { count: 'exact', head: true }).eq('status', 'Pendiente'),
         supabase.from('financial_accounts').select('*', { count: 'exact', head: true }),
         supabase.from('financial_transactions').select('*', { count: 'exact', head: true })
       ]);
@@ -74,6 +77,7 @@ export const metricsService = {
         purchasesCount: purchasesCount || 0,
         employeesCount: employeesCount || 0,
         departmentsCount: departmentsCount || 0,
+        leavesPendingCount: leavesPendingCount || 0,
         accountsCount: accountsCount || 0,
         transactionsCount: transactionsCount || 0
       };
@@ -91,6 +95,7 @@ export const metricsService = {
         purchasesCount: 0,
         employeesCount: 0,
         departmentsCount: 0,
+        leavesPendingCount: 0,
         accountsCount: 0,
         transactionsCount: 0
       };
