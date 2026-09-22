@@ -116,6 +116,24 @@
 
 ---
 
+### J. Módulo de Reportes & BI + Dashboard Ejecutivo (Conexión Total a Supabase)
+* **Servicio de Inteligencia de Negocios ([`src/services/biService.ts`](file:///D:/IX%20ciclo%20sistemas/proyects/Gestia/src/services/biService.ts)):**
+  * **Analítica de Ventas:** Facturación neta, ticket promedio, ventas diarias de los últimos 7 días, distribución porcentual por familias/categorías y ranking de productos estrella más vendidos.
+  * **Analítica de Inventario:** Unidades en stock global, valorización total del almacén a costo, recuento de quiebres de stock y listado ordenado de productos con mayor déficit de reposición.
+  * **Analítica Financiera:** Flujo de caja consolidado (entradas brutas vs egresos totales), desglose de gastos por categoría operativa y posición crediticia neta (por cobrar vs por pagar).
+  * **Analítica de RRHH:** Headcount oficial, nómina mensual acumulada, salario medio por colaborador, índice de puntualidad y distribución salarial por departamento.
+* **Vista Ejecutiva de BI ([`src/components/modules/BiView.tsx`](file:///D:/IX%20ciclo%20sistemas/proyects/Gestia/src/components/modules/BiView.tsx)):**
+  * Pestañas especializadas para Ventas, Inventario, Finanzas y RRHH.
+  * Gráficos interactivos de evolución con escala dinámica en tiempo real.
+  * Botón de **Exportar CSV** que genera y descarga al instante el archivo de auditoría según el submódulo seleccionado.
+* **Dashboard Principal Sincronizado ([`src/components/modules/DashboardView.tsx`](file:///D:/IX%20ciclo%20sistemas/proyects/Gestia/src/components/modules/DashboardView.tsx)):**
+  * Conexión completa de los 5 KPIs centrales con la base de datos de Supabase.
+  * Gráfico vectorial SVG de ventas diarias interactivo con curva y tooltips en tiempo real.
+  * Distribución de facturación por categoría.
+  * Tablas en vivo de *Últimas Ventas* y alertas de *Stock Bajo*.
+
+---
+
 ## 🗄️ 2. Mapeo de Tablas de Base de Datos Utilizadas
 | Entidad | Tabla en Supabase | Operaciones Implementadas |
 | :--- | :--- | :--- |
@@ -143,5 +161,4 @@
 ---
 
 ## 📌 3. Tareas Pendientes para la Próxima Sesión
-1. **Módulo Dashboard / BI:** Consolidar gráficos de ventas e inventario consumiendo las métricas reales acumuladas en la base de datos.
-2. **Módulo Configuración:** Administrar datos de la empresa (`company_settings`) y roles de usuario.
+1. **Módulo Configuración:** Administrar datos de la empresa (`company_settings`) y roles de usuario.
