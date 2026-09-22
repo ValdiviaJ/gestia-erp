@@ -81,21 +81,21 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onSuccess }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-      <div className="w-full max-w-md bg-white dark:bg-[#0F172A] rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in overflow-y-auto">
+      <div className="w-full max-w-md max-h-[92vh] flex flex-col bg-white dark:bg-[#0F172A] rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden my-auto">
         {/* Header Decorativo */}
-        <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-indigo-800 p-6 text-white text-center relative overflow-hidden">
+        <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-indigo-800 py-4 px-6 text-white text-center relative overflow-hidden shrink-0">
           <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none" />
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-white/15 backdrop-blur-md rounded-2xl mb-3 border border-white/20 shadow-inner">
-            <Building2 className="w-7 h-7 text-white" />
+          <div className="inline-flex items-center justify-center w-11 h-11 bg-white/15 backdrop-blur-md rounded-2xl mb-2 border border-white/20 shadow-inner">
+            <Building2 className="w-6 h-6 text-white" />
           </div>
-          <h1 className="text-2xl font-black tracking-tight">GESTIA ERP</h1>
-          <p className="text-xs text-blue-100/90 mt-1 font-medium">
+          <h1 className="text-xl sm:text-2xl font-black tracking-tight">GESTIA ERP</h1>
+          <p className="text-[11px] text-blue-100/90 mt-0.5 font-medium">
             Acceso Seguro Empresarial (Supabase Auth)
           </p>
         </div>
 
-        <div className="p-6 sm:p-7 space-y-5">
+        <div className="p-5 sm:p-6 space-y-4 overflow-y-auto no-scrollbar">
           {/* Alertas */}
           {errorMessage && (
             <div className="p-3.5 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-700 dark:text-red-400 text-xs flex items-start gap-2.5">
