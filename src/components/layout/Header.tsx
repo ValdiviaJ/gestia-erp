@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Bell, ChevronDown, CheckCheck, X, Menu, Sun, Moon, SunMoon } from 'lucide-react';
+import { Search, Bell, ChevronDown, CheckCheck, X, Menu, Sun, Moon, SunMoon, LogOut } from 'lucide-react';
 import { INITIAL_NOTIFICATIONS } from '../../data/mockData';
 import { ThemeMode } from '../../types';
 
@@ -9,9 +9,17 @@ interface HeaderProps {
   onToggleSidebar?: () => void;
   theme: ThemeMode;
   onChangeTheme: (theme: ThemeMode) => void;
+  userEmail?: string | null;
+  onLogout?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, theme, onChangeTheme }) => {
+export const Header: React.FC<HeaderProps> = ({ 
+  onToggleSidebar, 
+  theme, 
+  onChangeTheme,
+  userEmail,
+  onLogout 
+}) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
@@ -222,22 +230,39 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, theme, onChange
         <div className={`h-6 w-px ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}></div>
 
         {/* User Profile */}
-        <div className="flex items-center gap-3 pl-1 cursor-pointer group">
-          <div className="relative">
-            <img
-              src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=120"
-              alt="Angel Valdivia"
-              className="w-9 h-9 rounded-full object-cover ring-2 ring-blue-500/20 group-hover:ring-blue-500 transition-all"
-            />
-            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full"></span>
-          </div>
-          <div className="hidden sm:block text-left">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-slate-800 leading-tight">Angel Valdivia</span>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 transition-transform" />
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5 pl-1">
+            <div className="relative">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-xs ring-2 ring-blue-500/20">
+                {(userEmail ? userEmail[0].toUpperCase() : 'A')}
+              </div>
+              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full"></span>
             </div>
-            <span className="text-[11px] text-slate-400 font-medium">Administrador General</span>
+            <div className="hidden sm:block text-left">
+              <div className="flex items-center gap-1.5">
+                <span className={`text-xs font-bold leading-tight ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                  {userEmail ? userEmail.split('@')[0] : 'Angel Valdivia'}
+                </span>
+              </div>
+              <span className="text-[10px] text-slate-400 font-medium truncate block max-w-[130px]">
+                {userEmail || 'Administrador General'}
+              </span>
+            </div>
           </div>
+
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className={`p-2 rounded-xl transition-colors cursor-pointer ${
+                isDark 
+                  ? 'text-slate-400 hover:text-red-400 hover:bg-red-950/30' 
+                  : 'text-slate-500 hover:text-red-600 hover:bg-red-50'
+              }`}
+              title="Cerrar sesión"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
     </header>

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
+import { LoginModal } from './components/auth/LoginModal';
+import { supabase } from './lib/supabase';
 import { MODULES_CONFIG } from './data/mockData';
 import { MainModuleId, ThemeMode } from './types';
 
@@ -22,6 +24,30 @@ export function App() {
   const [theme, setTheme] = useState<ThemeMode>(() => {
     return (localStorage.getItem('gestia_theme') as ThemeMode) || 'hybrid';
   });
+
+  // Autenticación con Supabase
+  const [userSession, setUserSession] = useState<any>(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    // 1. Obtener sesión activa al cargar
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserSession(session);
+      setCheckingAuth(false);
+    });
+
+    // 2. Suscribirse a cambios de autenticación
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUserSession(null);
+  };
 
   useEffect(() => {
     localStorage.setItem('gestia_theme', theme);
@@ -76,6 +102,8 @@ export function App() {
             onToggleSidebar={() => setSidebarOpen(prev => !prev)} 
             theme={theme}
             onChangeTheme={setTheme}
+            userEmail={userSession?.user?.email}
+            onLogout={handleLogout}
           />
 
           {/* Submodule Tabs Navigation (when not in main dashboard) */}
@@ -149,6 +177,11 @@ export function App() {
         </footer>
         </div>
       </div>
+
+      {/* Modal de Autenticación Requerida si no hay sesión activa */}
+      {!checkingAuth && !userSession && (
+        <LoginModal onSuccess={() => {}} />
+      )}
     </div>
   );
 }
