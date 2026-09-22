@@ -524,13 +524,6 @@ BEGIN
   END LOOP;
 END $$;
 
--- ==============================================================================
--- [REGISTRO DE CAMBIO IMPORTANTE - SEGURIDAD Y PERMISOS POSTGRESQL]
--- FECHA: 2026-09-21
--- MOTIVO: Error 42501 (permission denied for table categories/products).
--- EXPLICACIÓN: Aunque RLS tenga políticas activas, el rol de la API de Supabase 
--- (anon y authenticated) requiere permisos explícitos de objeto (GRANT) a nivel de esquema.
--- ==============================================================================
 GRANT USAGE ON SCHEMA public TO anon, authenticated;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;

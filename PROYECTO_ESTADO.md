@@ -1,0 +1,109 @@
+# 📋 BITÁCORA DE DESARROLLO - GESTIA ERP
+
+**Proyecto:** GESTIA ERP  
+**Repositorio Remoto:** [https://github.com/ValdiviaJ/gestia-erp](https://github.com/ValdiviaJ/gestia-erp)  
+**Fecha de Sesión:** 21 de Septiembre, 2026  
+**Rama:** `main`  
+**Stack Principal:** React 19, TypeScript, Vite 8, Tailwind CSS v4, Lucide Icons, Supabase (PostgreSQL + Auth + RLS).
+
+---
+
+## 🚀 1. Hitos y Logros Desarrollados Hoy
+
+### A. Repositorio Independiente y Seguridad
+* **Desvinculación:** Se separó **Gestia** del proyecto previo (`chat-priva`) y se convirtió en un repositorio Git 100% independiente.
+* **Protección de Variables:** Se actualizó [.gitignore](file:///D:/IX%20ciclo%20sistemas/proyects/Gestia/.gitignore) blindando las credenciales `.env` y `.env*.local`.
+* **Push Inicial:** Vinculación al remoto `https://github.com/ValdiviaJ/gestia-erp.git` en la rama `main`.
+
+---
+
+### B. Módulo de Autenticación y Seguridad (Supabase Auth & RLS)
+* **Login Modal Seguro ([`src/components/auth/LoginModal.tsx`](file:///D:/IX%20ciclo%20sistemas/proyects/Gestia/src/components/auth/LoginModal.tsx)):**
+  * Bloqueo de acceso no autenticado para respetar las políticas de **Row Level Security (RLS)** de PostgreSQL.
+  * Credenciales rápidas de prueba con 1 solo clic (Admin, Ventas, Almacén) con clave prellenada `Gestia2026*`.
+  * Botón de auto-registro si el usuario no existe aún en Supabase Auth.
+* **Control de Sesión Global ([`src/App.tsx`](file:///D:/IX%20ciclo%20sistemas/proyects/Gestia/src/App.tsx)):**
+  * Listener en tiempo real `onAuthStateChange`.
+  * Avatar dinámico con iniciales, correo y botón de desconexión (`LogOut`) en la cabecera [`Header.tsx`](file:///D:/IX%20ciclo%20sistemas/proyects/Gestia/src/components/layout/Header.tsx).
+
+---
+
+### C. Módulo de Inventario
+* **Limpieza Visual:** Se eliminó el banner persistente que advertía sobre falta de categorías en [`InventarioView.tsx`](file:///D:/IX%20ciclo%20sistemas/proyects/Gestia/src/components/modules/InventarioView.tsx).
+* **Solución de Permisos (Error 42501):** 
+  * Identificación del error `permission denied for table categories`. En PostgreSQL, los roles de API (`anon` y `authenticated`) requerían permisos de esquema explícitos (`GRANT ALL`).
+  * Se añadieron los comandos de privilegios en [`supabase_schema.sql`](file:///D:/IX%20ciclo%20sistemas/proyects/Gestia/supabase_schema.sql#L527-L533).
+
+---
+
+### D. Optimización de Densidad y Zoom al 100%
+* **Escala Base ERP ([`src/index.css`](file:///D:/IX%20ciclo%20sistemas/proyects/Gestia/src/index.css)):**
+  * Se configuró la escala nativa `html { font-size: 14.5px; }`.
+  * Ahora el sistema en zoom normal **100%** se visualiza con la misma armonía, compactación y elegancia que antes requería zoom al 90%.
+* **Modales Responsivos:** El LoginModal se rediseñó con `max-h-[92vh]` y scroll interno suave para que no se corte en pantallas compactas.
+
+---
+
+### E. Módulo de Ventas / Terminal POS (Conexión Total a Supabase)
+* **Servicio ([`src/services/salesService.ts`](file:///D:/IX%20ciclo%20sistemas/proyects/Gestia/src/services/salesService.ts)):**
+  * `getClients()` / `createClient()` conectados a `public.clients`.
+  * `getSales()` con relaciones directas a productos, clientes y comprobantes.
+  * `createSale()`:
+    1. Inserta la orden en `public.sales`.
+    2. Inserta los ítems en `public.sale_items`.
+    3. **Dispara el trigger de BD `handle_sale_stock_reduction`**: descuenta en automático el stock de `public.products` y genera el movimiento de salida en el Kardex (`public.inventory_movements`).
+    4. Genera el comprobante electrónico oficial en `public.electronic_receipts`.
+* **Impresión Térmica y Descarga en PDF ([`src/utils/receiptPdfGenerator.ts`](file:///D:/IX%20ciclo%20sistemas/proyects/Gestia/src/utils/receiptPdfGenerator.ts)):**
+  * Genera el ticket oficial (80mm o A4) para Boletas y Facturas.
+  * Incluye razón social, RUC, cliente, desglose de ítems, Subtotal, IGV (18%), Total y código de barras.
+  * Disparador automático de impresión tras cobrar o desde el historial de ventas.
+
+---
+
+### F. Contadores e Insignias de Submódulos en Tiempo Real
+* **Servicio de Métricas ([`src/services/metricsService.ts`](file:///D:/IX%20ciclo%20sistemas/proyects/Gestia/src/services/metricsService.ts)):**
+  * Consulta en paralelo mediante `count: 'exact', head: true` el número real de registros en la BD.
+  * Actualiza dinámicamente los badges de los botones superiores en [`App.tsx`](file:///D:/IX%20ciclo%20sistemas/proyects/Gestia/src/App.tsx) (Productos, Categorías, Almacenes, Stock mínimo, Clientes, Pedidos, Comprobantes, Proveedores, etc.).
+
+---
+
+### G. Módulo de Compras (Conexión Total a Supabase)
+* **Servicio ([`src/services/purchasesService.ts`](file:///D:/IX%20ciclo%20sistemas/proyects/Gestia/src/services/purchasesService.ts)):**
+  * `getSuppliers()` / `createSupplier()` conectados a `public.suppliers`.
+  * `getPurchases()` con joins a proveedores, productos y recepciones.
+  * `createPurchase()` con inserción de ítems en `public.purchase_items`.
+  * `receiveGoods()`: 
+    1. Registra la auditoría en `public.goods_receipts` (almacén, guía de remisión, observaciones).
+    2. Cambia estado a `Recibido`.
+    3. **Suma stock real al producto** y crea el movimiento de entrada en el Kardex (`public.inventory_movements`).
+* **Vista Completa ([`src/components/modules/ComprasView.tsx`](file:///D:/IX%20ciclo%20sistemas/proyects/Gestia/src/components/modules/ComprasView.tsx)):**
+  * Directorio de proveedores con modal de registro.
+  * Generación y listado de Órdenes de Compra (OC).
+  * Recepción y control de calidad en almacén.
+  * Resumen histórico de adquisiciones.
+
+---
+
+## 🗄️ 2. Mapeo de Tablas de Base de Datos Utilizadas
+| Entidad | Tabla en Supabase | Operaciones Implementadas |
+| :--- | :--- | :--- |
+| **Productos** | `public.products` | Lectura, creación, actualización de stock por triggers y recepciones |
+| **Categorías** | `public.categories` | Lectura y creación |
+| **Almacenes** | `public.warehouses` | Lectura y asignación en compras y ventas |
+| **Kardex** | `public.inventory_movements` | Registro automático de salidas (Ventas) y entradas (Compras) |
+| **Clientes** | `public.clients` | Lectura, creación modal, actualización de total gastado |
+| **Ventas** | `public.sales` | Creación de pedido POS, totales, formas de pago y estados |
+| **Detalle Venta** | `public.sale_items` | Artículos, precios unitarios y subcuentas |
+| **Comprobantes** | `public.electronic_receipts` | Emisión de Boleta / Factura correlativa y estado SUNAT |
+| **Proveedores** | `public.suppliers` | Directorio homologado con RUC, contacto y teléfonos |
+| **Compras** | `public.purchases` | Emisión de órdenes OC, fechas de entrega y costos |
+| **Detalle Compra**| `public.purchase_items` | Cantidades y costos unitarios pactados |
+| **Recepciones** | `public.goods_receipts` | Guías de remisión, almacén destino y auditoría de ingreso |
+
+---
+
+## 📌 3. Tareas Pendientes para la Próxima Sesión
+1. **Módulo RRHH / Personal:** Conectar colaboradores (`employees`), departamentos y control de asistencia con Supabase.
+2. **Módulo Finanzas:** Conectar cuentas de banco (`financial_accounts`) y flujo de transacciones/caja (`financial_transactions`).
+3. **Módulo Dashboard / BI:** Consolidar gráficos de ventas e inventario consumiendo las métricas reales acumuladas en la base de datos.
+4. **Módulo Configuración:** Administrar datos de la empresa (`company_settings`) y roles de usuario.
