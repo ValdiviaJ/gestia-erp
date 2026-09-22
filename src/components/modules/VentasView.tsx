@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { salesService, SaleDb, ClientDb } from '../../services/salesService';
 import { inventoryService, ProductDb } from '../../services/inventoryService';
+import { printReceiptPdf } from '../../utils/receiptPdfGenerator';
 
 interface CartItem {
   id: string;
@@ -421,9 +422,23 @@ export const VentasView: React.FC<{ activeSubmodule: string }> = ({ activeSubmod
               </div>
 
               {lastCompletedSale ? (
-                <div className="bg-emerald-500 text-white p-3 rounded-xl flex items-center justify-center gap-2 font-bold animate-fade-in text-xs">
-                  <CheckCircle className="w-4 h-4" /> 
-                  <span>¡Venta {lastCompletedSale.sale_number} registrada en Supabase!</span>
+                <div className="bg-emerald-500 text-white p-3.5 rounded-xl flex flex-col gap-2 font-bold animate-fade-in text-xs shadow-md">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <CheckCircle className="w-4 h-4" /> 
+                      <span>¡Venta {lastCompletedSale.sale_number} registrada!</span>
+                    </div>
+                    <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded">
+                      {lastCompletedSale.electronic_receipts?.[0]?.full_number || 'OK'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => printReceiptPdf(lastCompletedSale)}
+                    className="w-full py-2 bg-white hover:bg-slate-100 text-emerald-800 rounded-lg text-xs font-black flex items-center justify-center gap-2 cursor-pointer shadow-xs transition-colors"
+                  >
+                    <Printer className="w-4 h-4" /> Imprimir / Descargar Comprobante PDF
+                  </button>
                 </div>
               ) : (
                 <button
@@ -548,9 +563,14 @@ export const VentasView: React.FC<{ activeSubmodule: string }> = ({ activeSubmod
                         </span>
                       </td>
                       <td className="p-3.5 text-right">
-                        <span className="text-[11px] font-mono font-bold text-blue-600 dark:text-blue-400">
-                          {s.electronic_receipts?.[0]?.full_number || '-'}
-                        </span>
+                        <button
+                          onClick={() => printReceiptPdf(s)}
+                          className="flex items-center gap-1.5 ml-auto px-2.5 py-1 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 text-blue-600 dark:text-blue-400 rounded-lg font-bold text-xs cursor-pointer transition-colors"
+                          title="Imprimir comprobante PDF"
+                        >
+                          <Receipt className="w-3.5 h-3.5" />
+                          <span>{s.electronic_receipts?.[0]?.full_number || 'Ver PDF'}</span>
+                        </button>
                       </td>
                     </tr>
                   ))
@@ -598,11 +618,20 @@ export const VentasView: React.FC<{ activeSubmodule: string }> = ({ activeSubmod
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <span className="font-bold text-slate-900 dark:text-white block">S/ {Number(s.total).toFixed(2)}</span>
-                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded">
-                          {receipt.sunat_status || 'Aceptado SUNAT'}
-                        </span>
+                      <div className="flex items-center gap-3 text-right">
+                        <div>
+                          <span className="font-bold text-slate-900 dark:text-white block">S/ {Number(s.total).toFixed(2)}</span>
+                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded">
+                            {receipt.sunat_status || 'Aceptado SUNAT'}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => printReceiptPdf(s)}
+                          className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold cursor-pointer shadow-xs flex items-center gap-1"
+                          title="Imprimir / Guardar PDF"
+                        >
+                          <Printer className="w-3.5 h-3.5" /> PDF
+                        </button>
                       </div>
                     </div>
                   );
