@@ -3,6 +3,7 @@ import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { LoginModal } from './components/auth/LoginModal';
 import { supabase } from './lib/supabase';
+import { metricsService, SystemCounts } from './services/metricsService';
 import { MODULES_CONFIG } from './data/mockData';
 import { MainModuleId, ThemeMode } from './types';
 
@@ -29,16 +30,26 @@ export function App() {
   const [userSession, setUserSession] = useState<any>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
+  // Conteos en vivo de la BD para insignias (badges) de submódulos
+  const [systemCounts, setSystemCounts] = useState<SystemCounts | null>(null);
+
+  const refreshCounts = async () => {
+    const counts = await metricsService.getSystemCounts();
+    setSystemCounts(counts);
+  };
+
   useEffect(() => {
     // 1. Obtener sesión activa al cargar
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUserSession(session);
       setCheckingAuth(false);
+      refreshCounts();
     });
 
     // 2. Suscribirse a cambios de autenticación
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUserSession(session);
+      if (session) refreshCounts();
     });
 
     return () => subscription.unsubscribe();
@@ -74,6 +85,38 @@ export function App() {
       if (targetConfig) {
         setActiveSubmodule(targetConfig.defaultSubmodule);
       }
+    }
+  };
+
+  // Función para obtener el número real de la BD para el badge del submódulo
+  const getSubmoduleBadge = (subId: string, fallbackBadge?: string | number): string | number | undefined => {
+    if (!systemCounts) return fallbackBadge;
+
+    switch (subId) {
+      // Inventario
+      case 'productos': return String(systemCounts.productsCount);
+      case 'categorias': return String(systemCounts.categoriesCount);
+      case 'almacenes': return String(systemCounts.warehousesCount);
+      case 'stock_minimo': return systemCounts.lowStockCount > 0 ? String(systemCounts.lowStockCount) : undefined;
+
+      // Ventas
+      case 'clientes': return String(systemCounts.clientsCount);
+      case 'pedidos': return String(systemCounts.salesCount);
+      case 'comprobantes': return String(systemCounts.receiptsCount);
+
+      // Compras
+      case 'proveedores': return String(systemCounts.suppliersCount);
+      case 'ordenes': return String(systemCounts.purchasesCount);
+
+      // RRHH
+      case 'empleados': return String(systemCounts.employeesCount);
+      case 'departamentos': return String(systemCounts.departmentsCount);
+
+      // Finanzas
+      case 'cuentas': return String(systemCounts.accountsCount);
+      case 'movimientos': return String(systemCounts.transactionsCount);
+
+      default: return fallbackBadge;
     }
   };
 
@@ -115,6 +158,7 @@ export function App() {
                 </span>
                 {currentModuleConfig.submodules.map((sub) => {
                   const isActive = activeSubmodule === sub.id;
+                  const liveBadge = getSubmoduleBadge(sub.id, sub.badge);
                   return (
                     <button
                       key={sub.id}
@@ -126,11 +170,11 @@ export function App() {
                       }`}
                     >
                       <span>{sub.name}</span>
-                      {sub.badge && (
-                        <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                      {liveBadge !== undefined && (
+                        <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold transition-all ${
                           isActive ? 'bg-blue-800 text-white' : 'bg-slate-100 text-slate-600'
                         }`}>
-                          {sub.badge}
+                          {liveBadge}
                         </span>
                       )}
                     </button>
