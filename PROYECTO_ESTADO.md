@@ -134,6 +134,22 @@
 
 ---
 
+### K. Módulo de Configuración, Usuarios y Seguridad (Conexión Total a Supabase)
+* **Servicio ([`src/services/configService.ts`](file:///D:/IX%20ciclo%20sistemas/proyects/Gestia/src/services/configService.ts)):**
+  * **Datos de la Empresa (`company_settings`):** Configuración de Razón Social, RUC oficial, dirección fiscal, teléfono, moneda base (PEN / USD) y tasa IGV.
+  * **Gestión de Roles (`roles`):** Consulta de roles con recuento de usuarios asignados y creación de nuevos roles de seguridad.
+  * **Perfiles de Usuario (`profiles`):** Visualización de usuarios registrados en Supabase Auth, cambio dinámico de roles de seguridad y suspensión/activación de acceso.
+  * **Matriz de Permisos:** Matriz transversal de privilegios por módulo funcional.
+  * **Bitácora de Auditoría (`audit_logs`):** Consulta en tiempo real de operaciones críticas registradas con filtro de búsqueda por usuario y entidad.
+* **Vista Completa ([`src/components/modules/ConfiguracionView.tsx`](file:///D:/IX%20ciclo%20sistemas/proyects/Gestia/src/components/modules/ConfiguracionView.tsx)):**
+  * Formulario reactivo para edición y guardado directo de los datos de la empresa en la BD.
+  * Submódulos para Usuarios, Roles & Perfiles, Matriz de Permisos, Auditoría y Ajustes Generales.
+  * Modal para creación de nuevos roles de seguridad.
+* **Métricas en Vivo:**
+  * Badges superiores sincronizados con la cantidad real de usuarios y roles registrados.
+
+---
+
 ## 🗄️ 2. Mapeo de Tablas de Base de Datos Utilizadas
 | Entidad | Tabla en Supabase | Operaciones Implementadas |
 | :--- | :--- | :--- |
@@ -157,8 +173,15 @@
 | **Cuentas Tesorería**| `public.financial_accounts` | Saldo consolidado, apertura de cuentas y actualización de saldo |
 | **Transacciones**| `public.financial_transactions` | Ingresos y egresos clasificados con conciliación bancaria |
 | **Créditos** | `public.credit_accounts` | Cuentas por cobrar y pagar con registro de abonos |
+| **Empresa / Ajustes**| `public.company_settings` | Consulta y edición de datos fiscales y tasa de impuestos |
+| **Roles** | `public.roles` | Consulta y creación de roles con conteo de usuarios |
+| **Perfiles / Users**| `public.profiles` | Asignación de roles, suspensión y estado de acceso |
+| **Auditoría** | `public.audit_logs` | Historial inalterable de operaciones y accesos del sistema |
 
 ---
 
-## 📌 3. Tareas Pendientes para la Próxima Sesión
-1. **Módulo Configuración:** Administrar datos de la empresa (`company_settings`) y roles de usuario.
+## 📌 3. Estado General del Proyecto
+* **Cobertura de la Base de Datos:** **100% de los módulos operativos y administrativos implementados** (Inventario, Ventas/POS, Compras, RRHH, Finanzas, Reportes/BI y Configuración).
+* **Próximas Mejoras Opcionales:**
+  1. Conexión de IA Copilot (`ai_insights` / `ai_chat_history`) con modelo LLM en tiempo real.
+  2. Integración directa con API de SUNAT para envío oficial de comprobantes electrónicos en producción.

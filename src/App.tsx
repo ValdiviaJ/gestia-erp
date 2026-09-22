@@ -118,6 +118,10 @@ export function App() {
       case 'egresos': return String(systemCounts.transactionsCount);
       case 'creditos': return systemCounts.creditsPendingCount > 0 ? String(systemCounts.creditsPendingCount) : undefined;
 
+      // Configuración
+      case 'usuarios': return String(systemCounts.usersCount);
+      case 'roles': return String(systemCounts.rolesCount);
+
       default: return fallbackBadge;
     }
   };

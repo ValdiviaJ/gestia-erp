@@ -25,6 +25,10 @@ export interface SystemCounts {
   accountsCount: number;
   transactionsCount: number;
   creditsPendingCount: number;
+
+  // Configuración
+  usersCount: number;
+  rolesCount: number;
 }
 
 export const metricsService = {
@@ -45,7 +49,9 @@ export const metricsService = {
         { count: leavesPendingCount },
         { count: accountsCount },
         { count: transactionsCount },
-        { count: creditsPendingCount }
+        { count: creditsPendingCount },
+        { count: usersCount },
+        { count: rolesCount }
       ] = await Promise.all([
         supabase.from('products').select('*', { count: 'exact', head: true }),
         supabase.from('categories').select('*', { count: 'exact', head: true }),
@@ -61,7 +67,9 @@ export const metricsService = {
         supabase.from('employee_leaves').select('*', { count: 'exact', head: true }).eq('status', 'Pendiente'),
         supabase.from('financial_accounts').select('*', { count: 'exact', head: true }),
         supabase.from('financial_transactions').select('*', { count: 'exact', head: true }),
-        supabase.from('credit_accounts').select('*', { count: 'exact', head: true }).neq('status', 'Pagado')
+        supabase.from('credit_accounts').select('*', { count: 'exact', head: true }).neq('status', 'Pagado'),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }),
+        supabase.from('roles').select('*', { count: 'exact', head: true })
       ]);
 
       const lowStockCount = (lowStockProducts || []).filter(
@@ -83,7 +91,9 @@ export const metricsService = {
         leavesPendingCount: leavesPendingCount || 0,
         accountsCount: accountsCount || 0,
         transactionsCount: transactionsCount || 0,
-        creditsPendingCount: creditsPendingCount || 0
+        creditsPendingCount: creditsPendingCount || 0,
+        usersCount: usersCount || 0,
+        rolesCount: rolesCount || 0
       };
     } catch (err) {
       console.error('Error fetching system counts from Supabase:', err);
@@ -102,7 +112,9 @@ export const metricsService = {
         leavesPendingCount: 0,
         accountsCount: 0,
         transactionsCount: 0,
-        creditsPendingCount: 0
+        creditsPendingCount: 0,
+        usersCount: 0,
+        rolesCount: 0
       };
     }
   }

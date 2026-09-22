@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Users, 
   ShieldCheck, 
@@ -8,29 +8,167 @@ import {
   Plus, 
   Check, 
   Lock,
-  Eye
+  Eye,
+  Save,
+  Building,
+  RefreshCw,
+  AlertCircle,
+  CheckCircle2,
+  FileText,
+  UserCheck,
+  Search
 } from 'lucide-react';
+import { 
+  configService, 
+  CompanySettingsDb, 
+  RoleDb, 
+  ProfileDb, 
+  AuditLogDb,
+  PERMISSION_MATRIX_DATA 
+} from '../../services/configService';
 
-export const ConfiguracionView: React.FC<{ activeSubmodule: string }> = ({ activeSubmodule }) => {
-  const [users] = useState([
-    { id: 'USR-01', name: 'Carlos López', email: 'clopez@empresa.com', role: 'Super Admin', status: 'Activo', lastLogin: 'Hace 5 min' },
-    { id: 'USR-02', name: 'Ana Torres', email: 'atorres@empresa.com', role: 'Cajero / Ventas', status: 'Activo', lastLogin: 'Hace 10 min' },
-    { id: 'USR-03', name: 'Luis Pérez', email: 'lperez@empresa.com', role: 'Almacenero', status: 'Activo', lastLogin: 'Hace 1 h' },
-    { id: 'USR-04', name: 'María Gómez', email: 'mgomez@empresa.com', role: 'Contador / Finanzas', status: 'Activo', lastLogin: 'Ayer' },
-  ]);
+interface ConfiguracionViewProps {
+  activeSubmodule: string;
+}
+
+export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({ activeSubmodule }) => {
+  const [settings, setSettings] = useState<CompanySettingsDb | null>(null);
+  const [roles, setRoles] = useState<RoleDb[]>([]);
+  const [profiles, setProfiles] = useState<ProfileDb[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLogDb[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [savingSettings, setSavingSettings] = useState<boolean>(false);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Filtro de auditoría
+  const [auditSearch, setAuditSearch] = useState('');
+
+  // Modales
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  const [newRoleName, setNewRoleName] = useState('');
+  const [newRoleDesc, setNewRoleDesc] = useState('');
+
+  // Carga de configuración
+  const loadConfigData = async () => {
+    try {
+      setLoading(true);
+      setErrorMsg(null);
+      const [sets, rols, profs, logs] = await Promise.all([
+        configService.getCompanySettings(),
+        configService.getRoles(),
+        configService.getProfiles(),
+        configService.getAuditLogs()
+      ]);
+      setSettings(sets);
+      setRoles(rols);
+      setProfiles(profs);
+      setAuditLogs(logs);
+    } catch (err: any) {
+      console.error('Error cargando configuración:', err);
+      setErrorMsg(err.message || 'Error al conectar con la base de datos');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadConfigData();
+  }, []);
+
+  // Guardar datos de la empresa
+  const handleSaveCompanySettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!settings) return;
+    try {
+      setSavingSettings(true);
+      setSuccessMsg(null);
+      const updated = await configService.updateCompanySettings(settings);
+      setSettings(updated);
+      setSuccessMsg('Datos de la empresa y facturación guardados correctamente en Supabase.');
+      setTimeout(() => setSuccessMsg(null), 4000);
+    } catch (err: any) {
+      alert(`Error al guardar configuración: ${err.message}`);
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  // Crear nuevo rol
+  const handleCreateRole = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newRoleName) return;
+    try {
+      await configService.createRole(newRoleName, newRoleDesc);
+      setIsRoleModalOpen(false);
+      setNewRoleName('');
+      setNewRoleDesc('');
+      loadConfigData();
+    } catch (err: any) {
+      alert(`Error al crear rol: ${err.message}`);
+    }
+  };
+
+  // Cambiar estado de usuario
+  const handleToggleUserStatus = async (p: ProfileDb) => {
+    const nextStatus = p.status === 'Activo' ? 'Inactivo' : 'Activo';
+    try {
+      await configService.updateProfileStatus(p.id, nextStatus);
+      loadConfigData();
+    } catch (err: any) {
+      alert(`Error actualizando usuario: ${err.message}`);
+    }
+  };
+
+  // Asignar rol a perfil
+  const handleRoleChange = async (profileId: string, roleId: string) => {
+    try {
+      await configService.updateProfileRole(profileId, roleId);
+      loadConfigData();
+    } catch (err: any) {
+      alert(`Error asignando rol: ${err.message}`);
+    }
+  };
+
+  const filteredLogs = auditLogs.filter(log => 
+    log.action.toLowerCase().includes(auditSearch.toLowerCase()) ||
+    log.entity.toLowerCase().includes(auditSearch.toLowerCase()) ||
+    (log.user_email && log.user_email.toLowerCase().includes(auditSearch.toLowerCase()))
+  );
 
   return (
     <div className="space-y-6">
-      {/* Submodule: Usuarios */}
+      {/* Alerta de Éxito */}
+      {successMsg && (
+        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl flex items-center gap-3 text-xs">
+          <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-600" />
+          <span className="font-semibold">{successMsg}</span>
+        </div>
+      )}
+
+      {/* Alerta de Error */}
+      {errorMsg && (
+        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl flex items-center gap-3 text-xs">
+          <AlertCircle className="w-5 h-5 shrink-0" />
+          <span>{errorMsg}</span>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* SUBMÓDULO: USUARIOS */}
+      {/* ========================================================= */}
       {activeSubmodule === 'usuarios' && (
         <div className="space-y-4">
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 flex justify-between items-center">
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-xs">
             <div>
               <h2 className="text-lg font-bold text-slate-900">Gestión de Usuarios del Sistema</h2>
-              <p className="text-xs text-slate-500">Crea cuentas de acceso, asigna correos corporativos y controla accesos</p>
+              <p className="text-xs text-slate-500">Cuentas vinculadas a Supabase Auth, roles asignados y estados de acceso</p>
             </div>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700">
-              + Nuevo Usuario
+            <button 
+              onClick={loadConfigData}
+              className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-200 transition-colors"
+            >
+              <RefreshCw className="w-4 h-4" /> Sincronizar
             </button>
           </div>
 
@@ -38,69 +176,103 @@ export const ConfiguracionView: React.FC<{ activeSubmodule: string }> = ({ activ
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold">
                 <tr>
-                  <th className="p-3.5">Usuario</th>
-                  <th className="p-3.5">Email</th>
-                  <th className="p-3.5">Rol Asignado</th>
-                  <th className="p-3.5">Último Ingreso</th>
+                  <th className="p-3.5">Usuario / Nombre</th>
+                  <th className="p-3.5">Correo Corporativo</th>
+                  <th className="p-3.5">Rol de Seguridad</th>
+                  <th className="p-3.5">Último Acceso</th>
                   <th className="p-3.5 text-center">Estado</th>
                   <th className="p-3.5 text-right">Acción</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {users.map(u => (
-                  <tr key={u.id} className="hover:bg-slate-50">
-                    <td className="p-3.5 font-bold text-slate-900">{u.name}</td>
-                    <td className="p-3.5 text-slate-600">{u.email}</td>
-                    <td className="p-3.5">
-                      <span className="bg-blue-50 text-blue-700 font-semibold px-2 py-0.5 rounded text-[11px]">
-                        {u.role}
-                      </span>
-                    </td>
-                    <td className="p-3.5 text-slate-500">{u.lastLogin}</td>
-                    <td className="p-3.5 text-center">
-                      <span className="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full text-[10px]">
-                        {u.status}
-                      </span>
-                    </td>
-                    <td className="p-3.5 text-right">
-                      <button className="text-blue-600 hover:text-blue-800 font-semibold">Configurar</button>
+                {profiles.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="p-8 text-center text-slate-400">
+                      No hay perfiles de usuario adicionales registrados en la base de datos.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  profiles.map(u => (
+                    <tr key={u.id} className="hover:bg-slate-50">
+                      <td className="p-3.5">
+                        <div className="font-bold text-slate-900">{u.full_name || 'Usuario Gestia'}</div>
+                        <div className="text-[10px] text-slate-400 font-mono">ID: {u.id.slice(0, 8)}...</div>
+                      </td>
+                      <td className="p-3.5 text-slate-600 font-medium">{u.email}</td>
+                      <td className="p-3.5">
+                        <select 
+                          value={u.role_id || ''}
+                          onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                          className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs text-blue-700 font-semibold outline-none"
+                        >
+                          <option value="">Sin Rol Asignado</option>
+                          {roles.map(r => (
+                            <option key={r.id} value={r.id}>{r.name}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="p-3.5 text-slate-500 font-mono text-[11px]">
+                        {u.last_login ? new Date(u.last_login).toLocaleString('es-PE') : 'Recientemente'}
+                      </td>
+                      <td className="p-3.5 text-center">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          u.status === 'Activo' 
+                            ? 'bg-emerald-100 text-emerald-800' 
+                            : 'bg-rose-100 text-rose-800'
+                        }`}>
+                          {u.status}
+                        </span>
+                      </td>
+                      <td className="p-3.5 text-right">
+                        <button 
+                          onClick={() => handleToggleUserStatus(u)}
+                          className="text-xs text-blue-600 hover:text-blue-800 font-semibold hover:underline"
+                        >
+                          {u.status === 'Activo' ? 'Suspender' : 'Activar'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
         </div>
       )}
 
-      {/* Submodule: Roles */}
+      {/* ========================================================= */}
+      {/* SUBMÓDULO: ROLES & PERFILES */}
+      {/* ========================================================= */}
       {activeSubmodule === 'roles' && (
         <div className="space-y-4">
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 flex justify-between items-center">
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 flex justify-between items-center shadow-xs">
             <div>
               <h2 className="text-lg font-bold text-slate-900">Roles y Niveles de Jerarquía</h2>
-              <p className="text-xs text-slate-500">Define plantillas de seguridad por puesto de trabajo</p>
+              <p className="text-xs text-slate-500">Plantillas de seguridad para control granular de accesos por cargo</p>
             </div>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700">
-              + Crear Rol
+            <button 
+              onClick={() => setIsRoleModalOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 shadow-sm"
+            >
+              <Plus className="w-4 h-4" /> Crear Rol
             </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[
-              { name: 'Super Administrador', desc: 'Acceso total a todos los módulos y ajustes financieros', users: 1 },
-              { name: 'Cajero / POS', desc: 'Acceso restringido a ventas, apertura/cierre de caja y clientes', users: 2 },
-              { name: 'Almacenero / Logística', desc: 'Gestión de inventario, Kardex, transferencias y recepción', users: 3 },
-              { name: 'Contador / Auditor', desc: 'Acceso a finanzas, facturas electrónicas, reportes y BI', users: 1 }
-            ].map((r, i) => (
-              <div key={i} className="bg-white p-5 rounded-2xl border border-slate-200 space-y-3">
-                <div className="flex justify-between items-center">
-                  <h3 className="font-bold text-sm text-slate-900">{r.name}</h3>
-                  <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-semibold">{r.users} usuarios</span>
+            {roles.map(r => (
+              <div key={r.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between hover:border-slate-300">
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="font-bold text-sm text-slate-900">{r.name}</h3>
+                    <span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-bold">
+                      {r.user_count || 0} usuarios
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500">{r.description || 'Perfil con privilegios asignados en el sistema'}</p>
                 </div>
-                <p className="text-xs text-slate-500">{r.desc}</p>
-                <div className="pt-2 border-t border-slate-100 flex justify-end">
-                  <button className="text-xs text-blue-600 font-semibold hover:underline">Editar Permisos</button>
+                <div className="pt-3 mt-4 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                  <span className="text-slate-400">{r.is_system ? '🛡️ Rol del Sistema' : 'Personalizado'}</span>
+                  <span className="text-blue-600 font-semibold">Activo</span>
                 </div>
               </div>
             ))}
@@ -108,33 +280,68 @@ export const ConfiguracionView: React.FC<{ activeSubmodule: string }> = ({ activ
         </div>
       )}
 
-      {/* Submodule: Permisos */}
+      {/* ========================================================= */}
+      {/* SUBMÓDULO: MATRIZ DE PERMISOS */}
+      {/* ========================================================= */}
       {activeSubmodule === 'permisos' && (
         <div className="space-y-4">
-          <div className="bg-white p-5 rounded-2xl border border-slate-200">
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
             <h2 className="text-lg font-bold text-slate-900">Matriz de Permisos por Módulo</h2>
-            <p className="text-xs text-slate-500">Configura la visibilidad y capacidad de edición para los 9 módulos funcionales</p>
+            <p className="text-xs text-slate-500">Configuración de visibilidad y privilegios operativos para los 9 módulos funcionales de Gestia</p>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 overflow-x-auto">
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-x-auto shadow-xs">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold">
                 <tr>
-                  <th className="p-3">Módulo</th>
-                  <th className="p-3 text-center">Super Admin</th>
-                  <th className="p-3 text-center">Cajero POS</th>
-                  <th className="p-3 text-center">Almacenero</th>
-                  <th className="p-3 text-center">Contador</th>
+                  <th className="p-3.5">Módulo Funcional</th>
+                  <th className="p-3.5 text-center">Super Admin</th>
+                  <th className="p-3.5 text-center">Cajero / POS</th>
+                  <th className="p-3.5 text-center">Almacén</th>
+                  <th className="p-3.5 text-center">Finanzas</th>
+                  <th className="p-3.5 text-center">RRHH</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {['Dashboard', 'Inventario', 'Ventas / POS', 'Compras', 'RRHH', 'Finanzas', 'BI / Reportes', 'IA Copilot', 'Configuración'].map((mod, i) => (
-                  <tr key={i} className="hover:bg-slate-50">
-                    <td className="p-3 font-bold text-slate-800">{mod}</td>
-                    <td className="p-3 text-center text-emerald-600 font-bold">✓ Total</td>
-                    <td className="p-3 text-center text-slate-600">{mod === 'Ventas / POS' || mod === 'Dashboard' ? '✓ Permitido' : '— Sin acceso'}</td>
-                    <td className="p-3 text-center text-slate-600">{mod === 'Inventario' || mod === 'Compras' ? '✓ Permitido' : '— Sin acceso'}</td>
-                    <td className="p-3 text-center text-slate-600">{mod === 'Finanzas' || mod === 'BI / Reportes' ? '✓ Permitido' : '— Sin acceso'}</td>
+                {PERMISSION_MATRIX_DATA.map((item, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50">
+                    <td className="p-3.5 font-bold text-slate-800 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+                      {item.name}
+                    </td>
+                    <td className="p-3.5 text-center">
+                      <span className="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full text-[10px]">
+                        ✓ Acceso Total
+                      </span>
+                    </td>
+                    <td className="p-3.5 text-center">
+                      {item.ventas ? (
+                        <span className="text-emerald-600 font-bold text-[11px]">✓ Permitido</span>
+                      ) : (
+                        <span className="text-slate-300 font-mono text-[11px]">— Restringido</span>
+                      )}
+                    </td>
+                    <td className="p-3.5 text-center">
+                      {item.almacen ? (
+                        <span className="text-emerald-600 font-bold text-[11px]">✓ Permitido</span>
+                      ) : (
+                        <span className="text-slate-300 font-mono text-[11px]">— Restringido</span>
+                      )}
+                    </td>
+                    <td className="p-3.5 text-center">
+                      {item.finanzas ? (
+                        <span className="text-emerald-600 font-bold text-[11px]">✓ Permitido</span>
+                      ) : (
+                        <span className="text-slate-300 font-mono text-[11px]">— Restringido</span>
+                      )}
+                    </td>
+                    <td className="p-3.5 text-center">
+                      {item.rrhh ? (
+                        <span className="text-emerald-600 font-bold text-[11px]">✓ Permitido</span>
+                      ) : (
+                        <span className="text-slate-300 font-mono text-[11px]">— Restringido</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -143,59 +350,229 @@ export const ConfiguracionView: React.FC<{ activeSubmodule: string }> = ({ activ
         </div>
       )}
 
-      {/* Submodule: Auditoria */}
+      {/* ========================================================= */}
+      {/* SUBMÓDULO: AUDITORÍA (AUDIT LOGS) */}
+      {/* ========================================================= */}
       {activeSubmodule === 'auditoria' && (
         <div className="space-y-4">
-          <div className="bg-white p-5 rounded-2xl border border-slate-200">
-            <h2 className="text-lg font-bold text-slate-900">Bitácora de Auditoría (Audit Log)</h2>
-            <p className="text-xs text-slate-500">Monitoreo inalterable de accesos y modificaciones en la plataforma</p>
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-xs">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">Bitácora de Auditoría (Audit Log)</h2>
+              <p className="text-xs text-slate-500">Trazabilidad inalterable de eventos, accesos y operaciones críticas</p>
+            </div>
+            <div className="relative w-full sm:w-64">
+              <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+              <input 
+                type="text" 
+                value={auditSearch}
+                onChange={e => setAuditSearch(e.target.value)}
+                placeholder="Buscar por usuario o acción..."
+                className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs"
+              />
+            </div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-2">
-            {[
-              { time: '09/06/2025 21:05', user: 'Carlos López', action: 'Modificó precio de venta de PRD-001 (Audífonos Bluetooth)' },
-              { time: '09/06/2025 18:40', user: 'Ana Torres', action: 'Completó cobro de boleta B001-0452 por S/ 230.00' },
-              { time: '09/06/2025 14:12', user: 'Luis Pérez', action: 'Recepcionó 50 unidades de Teclado Mecánico en Kardex' },
-              { time: '09/06/2025 10:00', user: 'Carlos López', action: 'Inició sesión desde IP 190.234.12.80 (Lima, Perú)' }
-            ].map((log, i) => (
-              <div key={i} className="flex items-center justify-between text-xs p-2.5 hover:bg-slate-50 rounded-lg">
-                <div>
-                  <span className="font-semibold text-slate-900">{log.user}: </span>
-                  <span className="text-slate-600">{log.action}</span>
-                </div>
-                <span className="text-[11px] text-slate-400 font-mono">{log.time}</span>
+          <div className="bg-white rounded-2xl border border-slate-200 divide-y divide-slate-100 shadow-xs overflow-hidden">
+            {filteredLogs.length === 0 ? (
+              <div className="p-8 text-center text-slate-400 text-xs">
+                No hay registros de auditoría que coincidan con la búsqueda.
               </div>
-            ))}
+            ) : (
+              filteredLogs.map((log) => (
+                <div key={log.id} className="p-3.5 flex items-center justify-between text-xs hover:bg-slate-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                      <ShieldCheck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="font-bold text-slate-900">{log.user_email || 'Sistema'}: </span>
+                      <span className="text-slate-700">{log.action}</span>
+                      <span className="text-[10px] text-slate-400 block font-mono">Entidad: {log.entity}</span>
+                    </div>
+                  </div>
+                  <span className="text-[11px] text-slate-400 font-mono shrink-0">
+                    {new Date(log.created_at).toLocaleString('es-PE')}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}
 
-      {/* Submodule: Ajustes */}
-      {activeSubmodule === 'ajustes' && (
-        <div className="space-y-4">
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 space-y-4">
-            <h2 className="text-lg font-bold text-slate-900">Datos de la Empresa y Facturación</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+      {/* ========================================================= */}
+      {/* SUBMÓDULO: AJUSTES DE EMPRESA */}
+      {/* ========================================================= */}
+      {activeSubmodule === 'ajustes' && settings && (
+        <form onSubmit={handleSaveCompanySettings} className="space-y-4">
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 flex justify-between items-center shadow-xs">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">Datos de la Empresa y Facturación</h2>
+              <p className="text-xs text-slate-500">Razón social, RUC, domicilios fiscales y parámetros de impuestos</p>
+            </div>
+            <button 
+              type="submit"
+              disabled={savingSettings}
+              className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors"
+            >
+              <Save className="w-4 h-4" />
+              <span>{savingSettings ? 'Guardando...' : 'Guardar Cambios'}</span>
+            </button>
+          </div>
+
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4 text-xs">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-slate-600 mb-1 font-semibold">Razón Social</label>
-                <input type="text" defaultValue="COMERCIAL PYME PERÚ S.A.C." className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
+                <label className="block text-slate-700 mb-1 font-semibold">Razón Social *</label>
+                <input 
+                  type="text" 
+                  required
+                  value={settings.company_name}
+                  onChange={e => setSettings({ ...settings, company_name: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium" 
+                />
               </div>
+
               <div>
-                <label className="block text-slate-600 mb-1 font-semibold">RUC</label>
-                <input type="text" defaultValue="20608912384" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
+                <label className="block text-slate-700 mb-1 font-semibold">RUC (Registro Único de Contribuyente) *</label>
+                <input 
+                  type="text" 
+                  required
+                  value={settings.ruc}
+                  onChange={e => setSettings({ ...settings, ruc: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold" 
+                />
               </div>
+
               <div>
-                <label className="block text-slate-600 mb-1 font-semibold">Moneda Principal</label>
-                <select className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
-                  <option>PEN - Soles Peruanos (S/)</option>
-                  <option>USD - Dólares Americanos ($)</option>
+                <label className="block text-slate-700 mb-1 font-semibold">Representante Legal</label>
+                <input 
+                  type="text" 
+                  value={settings.legal_representative || ''}
+                  onChange={e => setSettings({ ...settings, legal_representative: e.target.value })}
+                  placeholder="Ej. Ing. Carlos Medina"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl" 
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 mb-1 font-semibold">Dirección Fiscal / Local Principal</label>
+                <input 
+                  type="text" 
+                  value={settings.address || ''}
+                  onChange={e => setSettings({ ...settings, address: e.target.value })}
+                  placeholder="Av. Javier Prado Este 2450, Lima"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl" 
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 mb-1 font-semibold">Correo de Facturación</label>
+                <input 
+                  type="email" 
+                  value={settings.email || ''}
+                  onChange={e => setSettings({ ...settings, email: e.target.value })}
+                  placeholder="facturacion@empresa.pe"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl" 
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 mb-1 font-semibold">Teléfono Comercial</label>
+                <input 
+                  type="tel" 
+                  value={settings.phone || ''}
+                  onChange={e => setSettings({ ...settings, phone: e.target.value })}
+                  placeholder="+51 984 123 456"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl" 
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 mb-1 font-semibold">Moneda Principal</label>
+                <select 
+                  value={settings.currency_code}
+                  onChange={e => setSettings({ 
+                    ...settings, 
+                    currency_code: e.target.value,
+                    currency_symbol: e.target.value === 'USD' ? '$' : 'S/'
+                  })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold"
+                >
+                  <option value="PEN">PEN - Soles Peruanos (S/)</option>
+                  <option value="USD">USD - Dólares Americanos ($)</option>
                 </select>
               </div>
+
               <div>
-                <label className="block text-slate-600 mb-1 font-semibold">Tasa IGV General</label>
-                <input type="text" defaultValue="18%" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl" />
+                <label className="block text-slate-700 mb-1 font-semibold">Tasa de Impuesto IGV General (%)</label>
+                <input 
+                  type="number" 
+                  step="0.1"
+                  min="0"
+                  value={settings.tax_rate}
+                  onChange={e => setSettings({ ...settings, tax_rate: Number(e.target.value) })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold font-mono" 
+                />
               </div>
             </div>
+          </div>
+        </form>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL: CREAR ROL */}
+      {/* ========================================================= */}
+      {isRoleModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md border border-slate-200 shadow-2xl space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-blue-600" /> Nuevo Rol de Seguridad
+              </h3>
+              <button onClick={() => setIsRoleModalOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+
+            <form onSubmit={handleCreateRole} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Nombre del Rol *</label>
+                <input 
+                  type="text" 
+                  required
+                  value={newRoleName}
+                  onChange={e => setNewRoleName(e.target.value)}
+                  placeholder="Ej. Auditor Externo, Supervisor de Tienda"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Descripción de Alcance</label>
+                <textarea 
+                  rows={3}
+                  value={newRoleDesc}
+                  onChange={e => setNewRoleDesc(e.target.value)}
+                  placeholder="Descripción de funciones y permisos permitidos..."
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-100">
+                <button 
+                  type="button" 
+                  onClick={() => setIsRoleModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-semibold hover:bg-slate-200"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit" 
+                  className="px-5 py-2 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 shadow-sm"
+                >
+                  Guardar Rol
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
