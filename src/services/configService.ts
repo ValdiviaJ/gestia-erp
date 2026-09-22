@@ -163,29 +163,43 @@ export const configService = {
 
   // 3. PERFILES DE USUARIO
   async getProfiles(): Promise<ProfileDb[]> {
-    // 3.1 Sincronizar usuario activo actual en la tabla profiles si aún no figura
+    // 3.1 Sincronizar usuario activo actual en la tabla profiles SOLO si aún no existe
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         const u = session.user;
         const defaultName = u.user_metadata?.full_name || u.email?.split('@')[0] || 'Administrador';
         
-        // Obtener el primer rol de Super Admin
-        const { data: adminRole } = await supabase
-          .from('roles')
-          .select('id')
-          .ilike('name', '%admin%')
-          .limit(1)
+        // Verificar si ya existe en profiles para no sobreescribir su rol o estado
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('id, role_id, status')
+          .eq('id', u.id)
           .maybeSingle();
 
-        await supabase.from('profiles').upsert({
-          id: u.id,
-          email: u.email || '',
-          full_name: defaultName,
-          role_id: adminRole?.id || null,
-          status: 'Activo',
-          last_login: new Date().toISOString()
-        }, { onConflict: 'id' });
+        if (!existingProfile) {
+          // Obtener el primer rol de Super Admin por defecto solo en la creación inicial
+          const { data: adminRole } = await supabase
+            .from('roles')
+            .select('id')
+            .ilike('name', '%admin%')
+            .limit(1)
+            .maybeSingle();
+
+          await supabase.from('profiles').insert({
+            id: u.id,
+            email: u.email || '',
+            full_name: defaultName,
+            role_id: adminRole?.id || null,
+            status: 'Activo',
+            last_login: new Date().toISOString()
+          });
+        } else {
+          // Solo actualizar last_login
+          await supabase.from('profiles').update({
+            last_login: new Date().toISOString()
+          }).eq('id', u.id);
+        }
       }
     } catch (syncErr) {
       console.warn('Sincronización de perfil activa ignorada:', syncErr);

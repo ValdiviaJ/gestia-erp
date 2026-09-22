@@ -118,24 +118,42 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({ activeSubm
     }
   };
 
-  // Cambiar estado de usuario
+  // Cambiar estado de usuario (Activo / Suspendido / Inactivo)
   const handleToggleUserStatus = async (p: ProfileDb) => {
-    const nextStatus = p.status === 'Activo' ? 'Inactivo' : 'Activo';
+    const nextStatus = p.status === 'Activo' ? 'Suspendido' : 'Activo';
+    
+    // Actualización optimista inmediata en la UI
+    setProfiles(prev => prev.map(item => item.id === p.id ? { ...item, status: nextStatus } : item));
+    
     try {
       await configService.updateProfileStatus(p.id, nextStatus);
+      setSuccessMsg(`Usuario ${p.full_name || p.email} marcado como ${nextStatus}.`);
+      setTimeout(() => setSuccessMsg(null), 3000);
       loadConfigData();
     } catch (err: any) {
       alert(`Error actualizando usuario: ${err.message}`);
+      loadConfigData(); // revertir si falló
     }
   };
 
   // Asignar rol a perfil
   const handleRoleChange = async (profileId: string, roleId: string) => {
+    // Actualización optimista inmediata en la UI
+    const targetRole = roles.find(r => r.id === roleId);
+    setProfiles(prev => prev.map(item => item.id === profileId ? { 
+      ...item, 
+      role_id: roleId,
+      roles: targetRole ? { id: targetRole.id, name: targetRole.name, description: targetRole.description } : undefined 
+    } : item));
+
     try {
       await configService.updateProfileRole(profileId, roleId);
+      setSuccessMsg(`Rol actualizado correctamente.`);
+      setTimeout(() => setSuccessMsg(null), 3000);
       loadConfigData();
     } catch (err: any) {
       alert(`Error asignando rol: ${err.message}`);
+      loadConfigData(); // revertir si falló
     }
   };
 
