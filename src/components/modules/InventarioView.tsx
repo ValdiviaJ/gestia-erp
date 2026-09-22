@@ -296,29 +296,6 @@ export const InventarioView: React.FC<{ activeSubmodule: string }> = ({ activeSu
 
   return (
     <div className="space-y-6">
-      {/* Banner si las categorías o almacenes no se han cargado en Supabase */}
-      {categories.length > 0 && categories[0].id.startsWith('cat-') && (
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 text-blue-900 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold">
-              <Sparkles className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="font-bold text-xs">Tu base de datos en Supabase aún no tiene categorías ni almacenes guardados</p>
-              <p className="text-[11px] text-blue-700">Puedes crearlos automáticamente con un solo clic para tenerlos disponibles en los desplegables.</p>
-            </div>
-          </div>
-          <button
-            onClick={handleSeedDefaults}
-            disabled={seeding}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap shadow-sm shadow-blue-500/20"
-          >
-            {seeding ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-            {seeding ? 'Guardando en BD...' : 'Cargar datos iniciales en BD'}
-          </button>
-        </div>
-      )}
-
       {/* Submodule: Productos */}
       {activeSubmodule === 'productos' && (
         <div className="space-y-5">
