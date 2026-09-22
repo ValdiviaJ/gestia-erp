@@ -24,6 +24,7 @@ export interface SystemCounts {
   // Finanzas
   accountsCount: number;
   transactionsCount: number;
+  creditsPendingCount: number;
 }
 
 export const metricsService = {
@@ -43,7 +44,8 @@ export const metricsService = {
         { count: departmentsCount },
         { count: leavesPendingCount },
         { count: accountsCount },
-        { count: transactionsCount }
+        { count: transactionsCount },
+        { count: creditsPendingCount }
       ] = await Promise.all([
         supabase.from('products').select('*', { count: 'exact', head: true }),
         supabase.from('categories').select('*', { count: 'exact', head: true }),
@@ -58,7 +60,8 @@ export const metricsService = {
         supabase.from('departments').select('*', { count: 'exact', head: true }),
         supabase.from('employee_leaves').select('*', { count: 'exact', head: true }).eq('status', 'Pendiente'),
         supabase.from('financial_accounts').select('*', { count: 'exact', head: true }),
-        supabase.from('financial_transactions').select('*', { count: 'exact', head: true })
+        supabase.from('financial_transactions').select('*', { count: 'exact', head: true }),
+        supabase.from('credit_accounts').select('*', { count: 'exact', head: true }).neq('status', 'Pagado')
       ]);
 
       const lowStockCount = (lowStockProducts || []).filter(
@@ -79,7 +82,8 @@ export const metricsService = {
         departmentsCount: departmentsCount || 0,
         leavesPendingCount: leavesPendingCount || 0,
         accountsCount: accountsCount || 0,
-        transactionsCount: transactionsCount || 0
+        transactionsCount: transactionsCount || 0,
+        creditsPendingCount: creditsPendingCount || 0
       };
     } catch (err) {
       console.error('Error fetching system counts from Supabase:', err);
@@ -97,7 +101,8 @@ export const metricsService = {
         departmentsCount: 0,
         leavesPendingCount: 0,
         accountsCount: 0,
-        transactionsCount: 0
+        transactionsCount: 0,
+        creditsPendingCount: 0
       };
     }
   }

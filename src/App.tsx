@@ -115,7 +115,8 @@ export function App() {
 
       // Finanzas
       case 'cuentas': return String(systemCounts.accountsCount);
-      case 'movimientos': return String(systemCounts.transactionsCount);
+      case 'egresos': return String(systemCounts.transactionsCount);
+      case 'creditos': return systemCounts.creditsPendingCount > 0 ? String(systemCounts.creditsPendingCount) : undefined;
 
       default: return fallbackBadge;
     }

@@ -100,6 +100,22 @@
 
 ---
 
+### I. Módulo de Finanzas, Tesorería y Flujo de Caja (Conexión Total a Supabase)
+* **Servicio ([`src/services/financeService.ts`](file:///D:/IX%20ciclo%20sistemas/proyects/Gestia/src/services/financeService.ts)):**
+  * **Cuentas Bancarias y Cajas (`financial_accounts`):** Consulta de saldos, registro de nuevas cuentas bancarias, cajas chicas y billeteras digitales (BCP, BBVA, Yape, etc.).
+  * **Transacciones Financieras (`financial_transactions`):** Registro y consulta de ingresos y egresos clasificados por categoría (Mercadería, Gastos Fijos, Servicios, Planilla), impacto directo en el balance de la cuenta seleccionada.
+  * **Cartera de Crédito y Cobranzas (`credit_accounts`):** Control integral de cuentas por cobrar (clientes) y por pagar (proveedores), vencimientos, abonos progresivos y cálculo de saldos pendientes.
+* **Vista Completa ([`src/components/modules/FinanzasView.tsx`](file:///D:/IX%20ciclo%20sistemas/proyects/Gestia/src/components/modules/FinanzasView.tsx)):**
+  * **Ingresos & Facturación:** KPIs consolidados unificando ventas del POS y entradas financieras, con desglose de tickets e historial de transacciones.
+  * **Gastos & Egresos:** Listado clasificado con filtros por categoría y búsqueda en tiempo real.
+  * **Cuentas Bancarias & Cajas:** Tarjeta de saldo total consolidado en tesorería y grid de cuentas operativas.
+  * **Cartera de Créditos:** Pestañas separadas para Por Cobrar y Por Pagar con modal para abonar en línea.
+  * **Flujo de Caja:** Balance de liquidez neto en tiempo real (Ingresos Totales - Egresos Totales).
+* **Métricas en Vivo:**
+  * Conteo de cuentas activas, total de transacciones y badge dinámico de cuentas de crédito pendientes de cobro/pago.
+
+---
+
 ## 🗄️ 2. Mapeo de Tablas de Base de Datos Utilizadas
 | Entidad | Tabla en Supabase | Operaciones Implementadas |
 | :--- | :--- | :--- |
@@ -120,10 +136,12 @@
 | **Asistencia** | `public.employee_attendance` | Marcaciones de ingreso/salida, control de tardanzas y cálculo % |
 | **Permisos/Vac.** | `public.employee_leaves` | Solicitudes, conteo de días, aprobaciones y rechazos en vivo |
 | **Capacitaciones**| `public.employee_trainings` | Talleres, horas y asignación de participantes |
+| **Cuentas Tesorería**| `public.financial_accounts` | Saldo consolidado, apertura de cuentas y actualización de saldo |
+| **Transacciones**| `public.financial_transactions` | Ingresos y egresos clasificados con conciliación bancaria |
+| **Créditos** | `public.credit_accounts` | Cuentas por cobrar y pagar con registro de abonos |
 
 ---
 
 ## 📌 3. Tareas Pendientes para la Próxima Sesión
-1. **Módulo Finanzas:** Conectar cuentas de banco (`financial_accounts`), ingresos/egresos (`financial_transactions`) y cuentas de crédito/cobranza (`credit_accounts`).
-2. **Módulo Dashboard / BI:** Consolidar gráficos de ventas e inventario consumiendo las métricas reales acumuladas en la base de datos.
-3. **Módulo Configuración:** Administrar datos de la empresa (`company_settings`) y roles de usuario.
+1. **Módulo Dashboard / BI:** Consolidar gráficos de ventas e inventario consumiendo las métricas reales acumuladas en la base de datos.
+2. **Módulo Configuración:** Administrar datos de la empresa (`company_settings`) y roles de usuario.

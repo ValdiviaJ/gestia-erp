@@ -72,9 +72,10 @@ export const MODULES_CONFIG: ModuleConfig[] = [
     description: 'Flujo de caja, control de ingresos, egresos, cuentas por cobrar/pagar',
     defaultSubmodule: 'ingresos',
     submodules: [
-      { id: 'ingresos', name: 'Ingresos' },
+      { id: 'ingresos', name: 'Ingresos & Ventas' },
       { id: 'egresos', name: 'Gastos & Egresos' },
       { id: 'cuentas', name: 'Cuentas Bancarias & Cajas' },
+      { id: 'creditos', name: 'Cuentas por Cobrar/Pagar' },
       { id: 'flujo_caja', name: 'Flujo de Caja' }
     ]
   },
