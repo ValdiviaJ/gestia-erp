@@ -137,9 +137,13 @@
 ### K. Módulo de Configuración, Usuarios y Seguridad (Conexión Total a Supabase)
 * **Servicio ([`src/services/configService.ts`](file:///D:/IX%20ciclo%20sistemas/proyects/Gestia/src/services/configService.ts)):**
   * **Datos de la Empresa (`company_settings`):** Configuración de Razón Social, RUC oficial, dirección fiscal, teléfono, moneda base (PEN / USD) y tasa IGV.
-  * **Gestión de Roles (`roles`):** Consulta de roles con recuento de usuarios asignados y creación de nuevos roles de seguridad.
-  * **Perfiles de Usuario (`profiles`):** Visualización de usuarios registrados en Supabase Auth, cambio dinámico de roles de seguridad y suspensión/activación de acceso.
-  * **Matriz de Permisos:** Matriz transversal de privilegios por módulo funcional.
+  * **Gestión de Roles (`roles`):** Consulta de roles con recuento dinámico de usuarios asignados y creación de nuevos roles de seguridad.
+  * **Perfiles de Usuario (`profiles`):** Visualización de usuarios registrados en Supabase Auth, cambio dinámico de roles de seguridad y suspensión/activación de acceso con sincronización protegida.
+  * **Matriz de Permisos Editable e Interactiva:** Matriz transversal de privilegios por módulo funcional con botones interactivos de permitir/restringir y persistencia inmediata.
+  * **Control de Seguridad Real (Guardia de Rutas & Sidebar):**
+    * Filtrado reactivo de módulos en [`Sidebar.tsx`](file:///D:/IX%20ciclo%20sistemas/proyects/Gestia/src/components/layout/Sidebar.tsx) según los permisos concedidos al rol del usuario.
+    * Bloqueo de acceso con pantalla de *Acceso Restringido* en [`App.tsx`](file:///D:/IX%20ciclo%20sistemas/proyects/Gestia/src/App.tsx) si un usuario intenta navegar a un módulo no autorizado.
+    * Identificación visual del rol asignado en la cabecera [`Header.tsx`](file:///D:/IX%20ciclo%20sistemas/proyects/Gestia/src/components/layout/Header.tsx).
   * **Bitácora de Auditoría (`audit_logs`):** Consulta en tiempo real de operaciones críticas registradas con filtro de búsqueda por usuario y entidad.
 * **Vista Completa ([`src/components/modules/ConfiguracionView.tsx`](file:///D:/IX%20ciclo%20sistemas/proyects/Gestia/src/components/modules/ConfiguracionView.tsx)):**
   * Formulario reactivo para edición y guardado directo de los datos de la empresa en la BD.
