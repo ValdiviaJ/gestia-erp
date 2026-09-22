@@ -21,6 +21,8 @@ interface SidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
   theme?: 'hybrid' | 'light' | 'dark';
+  allowedModules?: string[];
+  userRoleName?: string;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -28,7 +30,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectModule,
   isOpen = false,
   onClose,
-  theme = 'hybrid'
+  theme = 'hybrid',
+  allowedModules,
+  userRoleName
 }) => {
   const isLightSidebar = theme === 'light';
 
@@ -107,33 +111,40 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Navigation Modules */}
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-        <div className={`px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider ${
+        <div className={`px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider flex justify-between items-center ${
           isLightSidebar ? 'text-slate-400' : 'text-slate-500'
         }`}>
-          Módulos Principales
+          <span>Módulos Disponibles</span>
+          {userRoleName && (
+            <span className="text-[9px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-mono lowercase">
+              {userRoleName}
+            </span>
+          )}
         </div>
-        {MODULES_CONFIG.map((module) => {
-          const isActive = currentModule === module.id;
-          return (
-            <button
-              key={module.id}
-              onClick={() => onSelectModule(module.id)}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all group cursor-pointer ${
-                isActive
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 font-semibold'
-                  : isLightSidebar
-                    ? 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                    : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                {getIcon(module.icon, isActive)}
-                <span>{module.name}</span>
-              </div>
-              {isActive && <ChevronRight className="w-4 h-4 text-blue-200" />}
-            </button>
-          );
-        })}
+        {MODULES_CONFIG
+          .filter(module => !allowedModules || allowedModules.includes(module.id))
+          .map((module) => {
+            const isActive = currentModule === module.id;
+            return (
+              <button
+                key={module.id}
+                onClick={() => onSelectModule(module.id)}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all group cursor-pointer ${
+                  isActive
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 font-semibold'
+                    : isLightSidebar
+                      ? 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                      : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  {getIcon(module.icon, isActive)}
+                  <span>{module.name}</span>
+                </div>
+                {isActive && <ChevronRight className="w-4 h-4 text-blue-200" />}
+              </button>
+            );
+          })}
       </div>
 
       {/* Footer Info */}

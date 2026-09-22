@@ -4,6 +4,7 @@ import { Header } from './components/layout/Header';
 import { LoginModal } from './components/auth/LoginModal';
 import { supabase } from './lib/supabase';
 import { metricsService, SystemCounts } from './services/metricsService';
+import { configService, PermissionMatrixItem } from './services/configService';
 import { MODULES_CONFIG } from './data/mockData';
 import { MainModuleId, ThemeMode } from './types';
 
@@ -26,9 +27,15 @@ export function App() {
     return (localStorage.getItem('gestia_theme') as ThemeMode) || 'hybrid';
   });
 
-  // Autenticación con Supabase
+  // Autenticación con Supabase y Roles de Seguridad
   const [userSession, setUserSession] = useState<any>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [userRoleInfo, setUserRoleInfo] = useState<{ roleName: string; roleKey: string; isSuperAdmin: boolean }>({
+    roleName: 'Super Admin',
+    roleKey: 'superAdmin',
+    isSuperAdmin: true
+  });
+  const [allowedModules, setAllowedModules] = useState<string[]>([]);
 
   // Conteos en vivo de la BD para insignias (badges) de submódulos
   const [systemCounts, setSystemCounts] = useState<SystemCounts | null>(null);
@@ -38,21 +45,68 @@ export function App() {
     setSystemCounts(counts);
   };
 
+  const loadUserPermissions = async () => {
+    try {
+      const [roleData, matrix] = await Promise.all([
+        configService.getCurrentUserProfile(),
+        configService.getPermissionsMatrix()
+      ]);
+      setUserRoleInfo(roleData);
+
+      if (roleData.isSuperAdmin) {
+        // Super Admin tiene acceso incondicional a todos los módulos
+        setAllowedModules(MODULES_CONFIG.map(m => m.id));
+      } else {
+        const allowed = matrix
+          .filter(item => (item as any)[roleData.roleKey] === true)
+          .map(item => item.module);
+        
+        // El dashboard principal siempre está disponible para navegación base
+        if (!allowed.includes('dashboard')) allowed.unshift('dashboard');
+        setAllowedModules(allowed);
+
+        // Si el usuario está en un módulo restringido, redirigirlo al dashboard
+        setCurrentModule(prev => {
+          if (!allowed.includes(prev)) {
+            return 'dashboard';
+          }
+          return prev;
+        });
+      }
+    } catch (e) {
+      console.warn('Error evaluating user permissions:', e);
+      setAllowedModules(MODULES_CONFIG.map(m => m.id));
+    }
+  };
+
   useEffect(() => {
     // 1. Obtener sesión activa al cargar
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUserSession(session);
       setCheckingAuth(false);
       refreshCounts();
+      if (session) loadUserPermissions();
     });
 
     // 2. Suscribirse a cambios de autenticación
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUserSession(session);
-      if (session) refreshCounts();
+      if (session) {
+        refreshCounts();
+        loadUserPermissions();
+      }
     });
 
-    return () => subscription.unsubscribe();
+    // 3. Suscribirse a eventos de actualización de matriz de permisos
+    const handlePermissionsChanged = () => {
+      loadUserPermissions();
+    };
+    window.addEventListener('gestia_permissions_updated', handlePermissionsChanged);
+
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('gestia_permissions_updated', handlePermissionsChanged);
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -139,6 +193,8 @@ export function App() {
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         theme={theme}
+        allowedModules={allowedModules.length > 0 ? allowedModules : undefined}
+        userRoleName={userRoleInfo.roleName}
       />
 
       {/* Main Content Area */}
@@ -152,6 +208,7 @@ export function App() {
             theme={theme}
             onChangeTheme={setTheme}
             userEmail={userSession?.user?.email}
+            userRole={userRoleInfo.roleName}
             onLogout={handleLogout}
           />
 
@@ -194,17 +251,39 @@ export function App() {
         {/* 3. Page Dynamic Scrollable Content */}
         <div className="flex-1 overflow-y-auto flex flex-col min-w-0">
 
-        {/* 4. Page Dynamic Content */}
+        {/* 4. Page Dynamic Content con Guardia de Permisos */}
         <main className="flex-1 p-6 max-w-7xl w-full mx-auto">
-          {currentModule === 'dashboard' && <DashboardView onNavigate={handleNavigate} />}
-          {currentModule === 'inventario' && <InventarioView activeSubmodule={activeSubmodule} />}
-          {currentModule === 'ventas' && <VentasView activeSubmodule={activeSubmodule} />}
-          {currentModule === 'compras' && <ComprasView activeSubmodule={activeSubmodule} />}
-          {currentModule === 'rrhh' && <RrhhView activeSubmodule={activeSubmodule} />}
-          {currentModule === 'finanzas' && <FinanzasView activeSubmodule={activeSubmodule} />}
-          {currentModule === 'bi' && <BiView activeSubmodule={activeSubmodule} />}
-          {currentModule === 'ia' && <IaView activeSubmodule={activeSubmodule} />}
-          {currentModule === 'configuracion' && <ConfiguracionView activeSubmodule={activeSubmodule} />}
+          {allowedModules.length > 0 && !allowedModules.includes(currentModule) ? (
+            <div className="bg-white p-12 rounded-3xl border border-rose-200 shadow-xs text-center space-y-4 max-w-lg mx-auto mt-12">
+              <div className="w-16 h-16 bg-rose-50 text-rose-600 rounded-2xl mx-auto flex items-center justify-center text-2xl font-bold">
+                🔒
+              </div>
+              <h2 className="text-xl font-bold text-slate-900">Acceso Restringido</h2>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Tu rol actual (<span className="font-semibold text-rose-600">{userRoleInfo.roleName}</span>) no tiene permisos asignados para acceder al módulo <span className="font-semibold">{currentModuleConfig.name}</span>.
+              </p>
+              <div className="pt-2">
+                <button
+                  onClick={() => setCurrentModule('dashboard')}
+                  className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 shadow-sm transition-colors cursor-pointer"
+                >
+                  Volver al Dashboard
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {currentModule === 'dashboard' && <DashboardView onNavigate={handleNavigate} />}
+              {currentModule === 'inventario' && <InventarioView activeSubmodule={activeSubmodule} />}
+              {currentModule === 'ventas' && <VentasView activeSubmodule={activeSubmodule} />}
+              {currentModule === 'compras' && <ComprasView activeSubmodule={activeSubmodule} />}
+              {currentModule === 'rrhh' && <RrhhView activeSubmodule={activeSubmodule} />}
+              {currentModule === 'finanzas' && <FinanzasView activeSubmodule={activeSubmodule} />}
+              {currentModule === 'bi' && <BiView activeSubmodule={activeSubmodule} />}
+              {currentModule === 'ia' && <IaView activeSubmodule={activeSubmodule} />}
+              {currentModule === 'configuracion' && <ConfiguracionView activeSubmodule={activeSubmodule} />}
+            </>
+          )}
         </main>
 
         {/* 5. Footer */}

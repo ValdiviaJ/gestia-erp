@@ -10,6 +10,7 @@ interface HeaderProps {
   theme: ThemeMode;
   onChangeTheme: (theme: ThemeMode) => void;
   userEmail?: string | null;
+  userRole?: string | null;
   onLogout?: () => void;
 }
 
@@ -18,6 +19,7 @@ export const Header: React.FC<HeaderProps> = ({
   theme, 
   onChangeTheme,
   userEmail,
+  userRole,
   onLogout 
 }) => {
   const [showNotifications, setShowNotifications] = useState(false);
@@ -244,8 +246,8 @@ export const Header: React.FC<HeaderProps> = ({
                   {userEmail ? userEmail.split('@')[0] : 'Angel Valdivia'}
                 </span>
               </div>
-              <span className="text-[10px] text-slate-400 font-medium truncate block max-w-[130px]">
-                {userEmail || 'Administrador General'}
+              <span className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold truncate block max-w-[130px]">
+                {userRole || 'Super Admin'}
               </span>
             </div>
           </div>

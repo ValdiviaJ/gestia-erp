@@ -24,7 +24,8 @@ import {
   RoleDb, 
   ProfileDb, 
   AuditLogDb,
-  PERMISSION_MATRIX_DATA 
+  PermissionMatrixItem,
+  DEFAULT_PERMISSION_MATRIX
 } from '../../services/configService';
 
 interface ConfiguracionViewProps {
@@ -36,6 +37,8 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({ activeSubm
   const [roles, setRoles] = useState<RoleDb[]>([]);
   const [profiles, setProfiles] = useState<ProfileDb[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogDb[]>([]);
+  const [permissionMatrix, setPermissionMatrix] = useState<PermissionMatrixItem[]>(DEFAULT_PERMISSION_MATRIX);
+  const [savingMatrix, setSavingMatrix] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [savingSettings, setSavingSettings] = useState<boolean>(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -64,15 +67,17 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({ activeSubm
       setErrorMsg(null);
       // 1. Sincronizar perfiles primero para asegurar que el usuario activo esté en la BD
       const profs = await configService.getProfiles();
-      const [sets, rols, logs] = await Promise.all([
+      const [sets, rols, logs, mat] = await Promise.all([
         configService.getCompanySettings(),
         configService.getRoles(),
-        configService.getAuditLogs()
+        configService.getAuditLogs(),
+        configService.getPermissionsMatrix()
       ]);
       setProfiles(profs);
       setSettings(sets);
       setRoles(rols);
       setAuditLogs(logs);
+      setPermissionMatrix(mat);
     } catch (err: any) {
       console.error('Error cargando configuración:', err);
       setErrorMsg(err.message || 'Error al conectar con la base de datos');
@@ -84,6 +89,36 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({ activeSubm
   useEffect(() => {
     loadConfigData();
   }, []);
+
+  // Alternar permiso para un módulo y rol
+  const handleTogglePermission = (moduleKey: string, roleKey: 'superAdmin' | 'ventas' | 'almacen' | 'finanzas' | 'rrhh') => {
+    // SuperAdmin siempre tiene acceso garantizado por seguridad
+    if (roleKey === 'superAdmin') return;
+
+    setPermissionMatrix(prev => prev.map(item => {
+      if (item.module === moduleKey) {
+        return {
+          ...item,
+          [roleKey]: !item[roleKey]
+        };
+      }
+      return item;
+    }));
+  };
+
+  // Guardar matriz de permisos
+  const handleSavePermissionMatrix = async () => {
+    try {
+      setSavingMatrix(true);
+      await configService.savePermissionsMatrix(permissionMatrix);
+      setSuccessMsg('¡Matriz de permisos actualizada y aplicada a todos los usuarios!');
+      setTimeout(() => setSuccessMsg(null), 3500);
+    } catch (err: any) {
+      alert(`Error guardando matriz: ${err.message}`);
+    } finally {
+      setSavingMatrix(false);
+    }
+  };
 
   // Guardar datos de la empresa
   const handleSaveCompanySettings = async (e: React.FormEvent) => {
@@ -348,9 +383,19 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({ activeSubm
       {/* ========================================================= */}
       {activeSubmodule === 'permisos' && (
         <div className="space-y-4">
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-            <h2 className="text-lg font-bold text-slate-900">Matriz de Permisos por Módulo</h2>
-            <p className="text-xs text-slate-500">Configuración de visibilidad y privilegios operativos para los 9 módulos funcionales de Gestia</p>
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-xs">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">Matriz de Permisos por Módulo (Editable)</h2>
+              <p className="text-xs text-slate-500">Configura la visibilidad y accesos reales para cada rol del sistema. Haz clic en cualquier casilla para conceder o restringir el acceso.</p>
+            </div>
+            <button 
+              onClick={handleSavePermissionMatrix}
+              disabled={savingMatrix}
+              className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer"
+            >
+              <Save className="w-4 h-4" />
+              <span>{savingMatrix ? 'Aplicando...' : 'Guardar Cambios de Accesos'}</span>
+            </button>
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-200 overflow-x-auto shadow-xs">
@@ -366,44 +411,78 @@ export const ConfiguracionView: React.FC<ConfiguracionViewProps> = ({ activeSubm
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {PERMISSION_MATRIX_DATA.map((item, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50">
+                {permissionMatrix.map((item) => (
+                  <tr key={item.module} className="hover:bg-slate-50">
                     <td className="p-3.5 font-bold text-slate-800 flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-blue-600"></span>
                       {item.name}
                     </td>
+                    
+                    {/* Super Admin: Inmutable (Siempre acceso total) */}
                     <td className="p-3.5 text-center">
-                      <span className="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full text-[10px]">
+                      <span className="bg-emerald-100 text-emerald-800 font-bold px-2.5 py-1 rounded-full text-[10px] inline-flex items-center gap-1 select-none">
                         ✓ Acceso Total
                       </span>
                     </td>
+
+                    {/* Cajero / Ventas */}
                     <td className="p-3.5 text-center">
-                      {item.ventas ? (
-                        <span className="text-emerald-600 font-bold text-[11px]">✓ Permitido</span>
-                      ) : (
-                        <span className="text-slate-300 font-mono text-[11px]">— Restringido</span>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleTogglePermission(item.module, 'ventas')}
+                        className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                          item.ventas 
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100' 
+                            : 'bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100'
+                        }`}
+                      >
+                        {item.ventas ? '✓ Permitido' : '✕ Restringido'}
+                      </button>
                     </td>
+
+                    {/* Almacén */}
                     <td className="p-3.5 text-center">
-                      {item.almacen ? (
-                        <span className="text-emerald-600 font-bold text-[11px]">✓ Permitido</span>
-                      ) : (
-                        <span className="text-slate-300 font-mono text-[11px]">— Restringido</span>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleTogglePermission(item.module, 'almacen')}
+                        className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                          item.almacen 
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100' 
+                            : 'bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100'
+                        }`}
+                      >
+                        {item.almacen ? '✓ Permitido' : '✕ Restringido'}
+                      </button>
                     </td>
+
+                    {/* Finanzas */}
                     <td className="p-3.5 text-center">
-                      {item.finanzas ? (
-                        <span className="text-emerald-600 font-bold text-[11px]">✓ Permitido</span>
-                      ) : (
-                        <span className="text-slate-300 font-mono text-[11px]">— Restringido</span>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleTogglePermission(item.module, 'finanzas')}
+                        className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                          item.finanzas 
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100' 
+                            : 'bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100'
+                        }`}
+                      >
+                        {item.finanzas ? '✓ Permitido' : '✕ Restringido'}
+                      </button>
                     </td>
+
+                    {/* RRHH */}
                     <td className="p-3.5 text-center">
-                      {item.rrhh ? (
-                        <span className="text-emerald-600 font-bold text-[11px]">✓ Permitido</span>
-                      ) : (
-                        <span className="text-slate-300 font-mono text-[11px]">— Restringido</span>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleTogglePermission(item.module, 'rrhh')}
+                        className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                          item.rrhh 
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100' 
+                            : 'bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100'
+                        }`}
+                      >
+                        {item.rrhh ? '✓ Permitido' : '✕ Restringido'}
+                      </button>
                     </td>
                   </tr>
                 ))}

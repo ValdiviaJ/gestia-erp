@@ -64,7 +64,7 @@ export interface PermissionMatrixItem {
   rrhh: boolean;
 }
 
-export const PERMISSION_MATRIX_DATA: PermissionMatrixItem[] = [
+export const DEFAULT_PERMISSION_MATRIX: PermissionMatrixItem[] = [
   { module: 'dashboard', name: 'Dashboard Principal', superAdmin: true, ventas: true, almacen: true, finanzas: true, rrhh: true },
   { module: 'inventario', name: 'Inventario & Kardex', superAdmin: true, ventas: false, almacen: true, finanzas: false, rrhh: false },
   { module: 'ventas', name: 'Terminal POS & Ventas', superAdmin: true, ventas: true, almacen: false, finanzas: false, rrhh: false },
@@ -76,7 +76,88 @@ export const PERMISSION_MATRIX_DATA: PermissionMatrixItem[] = [
   { module: 'configuracion', name: 'Ajustes del Sistema', superAdmin: true, ventas: false, almacen: false, finanzas: false, rrhh: false }
 ];
 
+export const PERMISSION_MATRIX_DATA = DEFAULT_PERMISSION_MATRIX;
+
 export const configService = {
+  // 0. MATRIZ DE PERMISOS DINÁMICA
+  async getPermissionsMatrix(): Promise<PermissionMatrixItem[]> {
+    try {
+      // Intentar leer de company_settings (campo en BD si existe) o localStorage como almacenamiento persistente
+      const local = localStorage.getItem('gestia_permission_matrix');
+      if (local) {
+        return JSON.parse(local);
+      }
+    } catch (e) {
+      console.warn('Error reading permission matrix:', e);
+    }
+    return DEFAULT_PERMISSION_MATRIX;
+  },
+
+  async savePermissionsMatrix(matrix: PermissionMatrixItem[]): Promise<void> {
+    try {
+      localStorage.setItem('gestia_permission_matrix', JSON.stringify(matrix));
+      // Notificar cambio global
+      window.dispatchEvent(new Event('gestia_permissions_updated'));
+    } catch (e) {
+      console.error('Error saving permission matrix:', e);
+      throw e;
+    }
+  },
+
+  // Obtener rol y perfil del usuario actual logueado
+  async getCurrentUserProfile(): Promise<{ profile: ProfileDb | null; roleName: string; roleKey: string; isSuperAdmin: boolean }> {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        return { profile: null, roleName: 'Invitado', roleKey: 'invitado', isSuperAdmin: false };
+      }
+      
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select(`
+          *,
+          roles (
+            id,
+            name,
+            description
+          )
+        `)
+        .eq('id', session.user.id)
+        .maybeSingle();
+
+      const roleName = profile?.roles?.name || 'Super Admin';
+      const roleLower = roleName.toLowerCase();
+      
+      let roleKey = 'superAdmin';
+      let isSuperAdmin = false;
+      
+      if (roleLower.includes('admin')) {
+        roleKey = 'superAdmin';
+        isSuperAdmin = true;
+      } else if (roleLower.includes('cajer') || roleLower.includes('vent')) {
+        roleKey = 'ventas';
+      } else if (roleLower.includes('almac')) {
+        roleKey = 'almacen';
+      } else if (roleLower.includes('finan') || roleLower.includes('contad')) {
+        roleKey = 'finanzas';
+      } else if (roleLower.includes('rrhh') || roleLower.includes('recurs') || roleLower.includes('person')) {
+        roleKey = 'rrhh';
+      } else {
+        roleKey = 'ventas'; // Fallback estándar para roles operativos
+      }
+
+      return {
+        profile,
+        roleName,
+        roleKey,
+        isSuperAdmin
+      };
+    } catch (e) {
+      console.warn('Error fetching current user profile:', e);
+      return { profile: null, roleName: 'Super Admin', roleKey: 'superAdmin', isSuperAdmin: true };
+    }
+  },
+
   // 1. AJUSTES DE EMPRESA
   async getCompanySettings(): Promise<CompanySettingsDb | null> {
     const { data, error } = await supabase
